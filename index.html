@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NP Expeditor Calc</title>
     <style>
-        /* Стилізація під бренд-бук Нової Пошти */
         :root {
             --np-red: #e30613;
             --np-dark: #231f20;
@@ -65,13 +64,13 @@
             font-size: 16px; 
             cursor: pointer; 
             font-weight: bold;
-            transition: opacity 0.2s;
         }
 
         button:active { opacity: 0.8; }
 
         .btn-secondary { background-color: var(--np-dark); margin-top: 10px; }
-        .btn-danger { background-color: #757575; font-size: 11px; padding: 6px 8px; width: auto; }
+        .btn-danger { background-color: #757575; font-size: 11px; padding: 6px 8px; width: auto; color: white; border-radius: 4px; cursor: pointer; }
+        .btn-danger:hover { background-color: var(--np-red); }
         .btn-clear-all { background-color: var(--np-dark); font-size: 12px; padding: 8px; width: auto; }
 
         .result-box { 
@@ -130,7 +129,7 @@
         .history-header { display: flex; justify-content: space-between; align-items: center; margin-top: 35px; }
 
         .backup-section { margin-top: 40px; background: #fff; padding: 15px; border-radius: 8px; border: 1px dashed var(--np-border); text-align: center; }
-        .btn-backup { background-color: #666; font-size: 11px; width: auto; padding: 8px 12px; margin-top: 10px; }
+        .btn-backup { background-color: #666; font-size: 11px; width: auto; padding: 8px 12px; margin-top: 10px; color: white; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -284,13 +283,19 @@
         let earnings = BASE_STRIKE, en = 0, weight = 0;
         currentAddresses.forEach(a => { earnings += a.cost; en += a.enCount; weight += a.weight; });
         const now = new Date();
+        
+        // Фікс дати: день.місяць (наприклад, 19.05)
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const dateStr = `${day}.${month}`;
+
         const shift = {
             id: Date.now(),
-            date: now.toLocaleDateString('uk-UA').slice(0,5), // Формат DD.MM
+            date: dateStr, 
             monthYear: `${now.getMonth() + 1}.${now.getFullYear()}`,
-            count: currentAddresses.length,
-            en: en,
-            weight: weight,
+            count: parseInt(currentAddresses.length) || 0,
+            en: parseInt(en) || 0,
+            weight: parseFloat(weight) || 0,
             earnings: parseFloat(earnings.toFixed(2))
         };
         let history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
@@ -309,14 +314,27 @@
 
         let mE = 0, mW = 0, mEn = 0, mAdd = 0;
         tbody.innerHTML = '';
+        
         history.forEach(s => {
-            if (s.monthYear === curMY) { mE += s.earnings; mW += s.weight; mEn += s.en; mAdd += s.count; }
+            // Перевірка полів, щоб старі записи без нових полів не ламали статистику
+            const shiftCount = parseInt(s.count) || parseInt(s.addressesCount) || 0;
+            const shiftEn = parseInt(s.en) || parseInt(s.enCount) || 0;
+            const shiftWeight = parseFloat(s.weight) || 0;
+            const shiftEarnings = parseFloat(s.earnings) || 0;
+
+            if (s.monthYear === curMY) { 
+                mE += shiftEarnings; 
+                mW += shiftWeight; 
+                mEn += shiftEn; 
+                mAdd += shiftCount; 
+            }
+            
             tbody.innerHTML += `<tr>
-                <td><b>${s.date}</b></td>
-                <td>${s.count}/${s.en}</td>
-                <td style="color:#666">${s.weight.toFixed(1)} кг</td>
-                <td><b>${s.earnings.toFixed(0)}</b></td>
-                <td><span style="color:#ccc; cursor:pointer" onclick="deleteShift(${s.id})">🗑️</span></td>
+                <td><b>${s.date || 'Зміна'}</b></td>
+                <td>${shiftCount}/${shiftEn}</td>
+                <td style="color:#666">${shiftWeight.toFixed(1)} кг</td>
+                <td><b>${shiftEarnings.toFixed(0)}</b></td>
+                <td><button class="btn-danger" onclick="deleteShift(${s.id})">🗑️</button></td>
             </tr>`;
         });
         document.getElementById('month-earnings').innerText = `${mE.toFixed(2)} грн`;
