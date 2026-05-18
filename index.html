@@ -74,7 +74,11 @@
         
         <div class="result-box">
             <h3>Поточний заробіток: <span id="live-total">245.00</span> грн</h3>
-            <p>Адрес: <span id="live-addresses">0</span> | Всього ЕН: <span id="live-en">0</span></p>
+            <p>
+                Адрес: <span id="live-addresses">0</span> | 
+                Всього ЕН: <span id="live-en">0</span> | 
+                <strong>Всього ваги: <span id="live-weight">0.00</span> кг</strong>
+            </p>
         </div>
         
         <button class="btn-secondary" onclick="saveShift()">Зберегти зміну в статистику</button>
@@ -201,15 +205,18 @@
     function updateLiveUI() {
         let total = BASE_STRIKE;
         let totalEN = 0;
+        let totalWeight = 0;
 
         currentAddresses.forEach(addr => {
             total += addr.cost;
             totalEN += addr.enCount;
+            totalWeight += addr.weight;
         });
 
         document.getElementById('live-total').innerText = total.toFixed(2);
         document.getElementById('live-addresses').innerText = currentAddresses.length;
         document.getElementById('live-en').innerText = totalEN;
+        document.getElementById('live-weight').innerText = totalWeight.toFixed(2);
 
         const log = document.getElementById('addresses-log');
         log.innerHTML = '';
@@ -319,7 +326,6 @@
         }
     }
 
-    // Експорт копії даних у файл
     function exportBackup() {
         const history = localStorage.getItem('shiftHistory');
         if (!history || history === "[]") {
@@ -333,7 +339,6 @@
         a.click();
     }
 
-    // Імпорт даних із файлу копії
     function importBackup(input) {
         const file = input.files[0];
         if (!file) return;
