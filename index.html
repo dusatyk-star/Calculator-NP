@@ -3,111 +3,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Калькулятор Експедитора</title>
+    <title>NP Expeditor Calc</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1, h2 { text-align: center; color: #d32f2f; }
+        /* Стилізація під бренд-бук Нової Пошти */
+        :root {
+            --np-red: #e30613;
+            --np-dark: #231f20;
+            --np-grey: #f2f2f2;
+            --np-border: #d1d1d1;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--np-grey); 
+            margin: 0; 
+            padding: 15px; 
+            color: var(--np-dark); 
+        }
+
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-top: 8px solid var(--np-red);
+        }
+
+        h1 { 
+            text-align: center; 
+            color: var(--np-red); 
+            text-transform: uppercase;
+            font-size: 22px;
+            letter-spacing: 1px;
+            margin-bottom: 25px;
+        }
+
+        h2 { font-size: 18px; border-bottom: 2px solid var(--np-grey); padding-bottom: 10px; margin-top: 25px; }
+
         .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background-color: #d32f2f; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        button:hover { background-color: #b71c1c; }
-        .btn-secondary { background-color: #555; margin-top: 10px; }
-        .btn-secondary:hover { background-color: #333; }
-        .btn-danger { background-color: #757575; font-size: 12px; padding: 5px 10px; width: auto; }
-        .btn-danger:hover { background-color: #c62828; }
-        .btn-clear-all { background-color: #757575; font-size: 14px; padding: 8px; width: auto; }
-        .btn-clear-all:hover { background-color: #424242; }
-        .result-box { background: #ffebee; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 5px solid #d32f2f; }
-        .stats-box { background: #e8f5e9; padding: 15px; border-radius: 5px; margin-top: 15px; border-left: 5px solid #2e7d32; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+        
+        input { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid var(--np-border); 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-size: 16px;
+            outline-color: var(--np-red);
+        }
+
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            background-color: var(--np-red); 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            font-weight: bold;
+            transition: opacity 0.2s;
+        }
+
+        button:active { opacity: 0.8; }
+
+        .btn-secondary { background-color: var(--np-dark); margin-top: 10px; }
+        .btn-danger { background-color: #757575; font-size: 11px; padding: 6px 8px; width: auto; }
+        .btn-clear-all { background-color: var(--np-dark); font-size: 12px; padding: 8px; width: auto; }
+
+        .result-box { 
+            background: #fffafa; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-top: 20px; 
+            border: 1px solid #ffcdd2;
+            text-align: center;
+        }
+
+        .result-box h3 { margin: 0; color: var(--np-red); font-size: 24px; }
+        .result-box p { margin: 10px 0 0 0; font-size: 14px; color: #555; }
+
+        .stats-box { 
+            background: #fdfdfd; 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin-top: 15px; 
+            border: 2px solid var(--np-red); 
+        }
+
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .stats-item { background: white; padding: 10px; border-radius: 5px; border: 1px solid #c8e6c9; text-align: center; }
-        .stats-item span { display: block; font-size: 12px; color: #666; }
-        .stats-item strong { font-size: 16px; color: #2e7d32; }
-        .address-list { margin-top: 15px; max-height: 250px; overflow-y: auto; background: #fafafa; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        .address-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
-        .address-info { display: flex; flex-direction: column; }
-        .address-name { font-weight: bold; color: #333; }
-        .address-details { font-size: 12px; color: #666; }
-        .delete-btn { color: #d32f2f; cursor: pointer; font-weight: bold; padding: 0 10px; font-size: 16px; }
-        .delete-btn:hover { color: #b71c1c; transform: scale(1.2); }
-        .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        .history-table th, .history-table td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 14px; }
-        .history-table th { background-color: #f2f2f2; }
-        .history-header { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; }
-        .backup-section { margin-top: 30px; background: #eceff1; padding: 15px; border-radius: 5px; border: 1px solid #b0bec5; text-align: center; }
-        .backup-btns { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
-        .btn-backup { background-color: #607d8b; font-size: 12px; width: auto; padding: 8px 12px; }
-        .btn-backup:hover { background-color: #455a64; }
+        .stats-item { background: var(--np-grey); padding: 10px; border-radius: 6px; text-align: center; }
+        .stats-item span { display: block; font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
+        .stats-item strong { font-size: 15px; color: var(--np-dark); }
+
+        .address-list { 
+            margin-top: 15px; 
+            max-height: 250px; 
+            overflow-y: auto; 
+            background: #fff; 
+            padding: 5px; 
+            border: 1px solid var(--np-grey); 
+            border-radius: 6px; 
+        }
+
+        .address-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 10px; 
+            border-bottom: 1px solid var(--np-grey); 
+            font-size: 14px; 
+        }
+
+        .address-name { font-weight: bold; color: var(--np-dark); }
+        .address-details { font-size: 12px; color: #777; }
+        .delete-btn { color: var(--np-red); cursor: pointer; font-size: 18px; padding-left: 10px; }
+
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        .history-table th { background-color: var(--np-red); color: white; padding: 10px 5px; font-size: 12px; font-weight: normal; }
+        .history-table td { border: 1px solid var(--np-grey); padding: 10px 5px; text-align: center; font-size: 13px; }
+        .history-table tr:nth-child(even) { background-color: #fafafa; }
+
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-top: 35px; }
+
+        .backup-section { margin-top: 40px; background: #fff; padding: 15px; border-radius: 8px; border: 1px dashed var(--np-border); text-align: center; }
+        .btn-backup { background-color: #666; font-size: 11px; width: auto; padding: 8px 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🚚 Калькулятор Зміни</h1>
+    <h1>Нова Пошта: Експедитор</h1>
     
     <div id="current-shift">
-        <h2>Поточна зміна</h2>
-        <p><strong>Базова ставка:</strong> 245 грн (включено)</p>
-        
         <div class="form-group">
-            <label for="address-title">Назва адреси / Орієнтир (необов'язково):</label>
-            <input type="text" id="address-title" placeholder="Наприклад: Хрещатик 1 або ЖК Парковий">
+            <label>📍 Назва адреси / Орієнтир:</label>
+            <input type="text" id="address-title" placeholder="ЖК, вулиця або номер">
         </div>
 
         <div class="form-group">
-            <label for="weight">Вага вантажу на адресі (кг):</label>
-            <input type="number" id="weight" step="0.01" placeholder="Наприклад: 12.5">
+            <label>⚖️ Вага вантажу (кг):</label>
+            <input type="number" id="weight" step="0.01" placeholder="0.00">
         </div>
         
         <div class="form-group">
-            <label for="en-count">Кількість ЕН на цій адресі:</label>
-            <input type="number" id="en-count" placeholder="Якщо порожньо — порахує як 1">
+            <label>📄 Кількість ЕН:</label>
+            <input type="number" id="en-count" placeholder="Порожньо = 1 ЕН">
         </div>
         
-        <button onclick="addAddress()">Додати адресу</button>
+        <button onclick="addAddress()">ДОДАТИ АДРЕСУ</button>
         
-        <h3>Додані адреси за сьогодні:</h3>
         <div class="address-list" id="addresses-log">
-            </div>
+            <p style="text-align:center; color:#999; font-size:13px; padding-top:10px;">Список адрес на сьогодні порожній</p>
+        </div>
         
         <div class="result-box">
-            <h3>Поточний заробіток: <span id="live-total">245.00</span> грн</h3>
+            <p style="margin:0 0 5px 0; color:#888;">Поточний підсумок дня:</p>
+            <h3><span id="live-total">245.00</span> грн</h3>
             <p>
-                Адрес: <span id="live-addresses">0</span> | 
-                Всього ЕН: <span id="live-en">0</span> | 
-                <strong>Всього ваги: <span id="live-weight">0.00</span> кг</strong>
+                <b><span id="live-addresses">0</span></b> адр. | 
+                <b><span id="live-en">0</span></b> ЕН | 
+                <b><span id="live-weight">0.00</span></b> кг
             </p>
         </div>
         
-        <button class="btn-secondary" onclick="saveShift()">Зберегти зміну в статистику</button>
+        <button class="btn-secondary" onclick="saveShift()">ЗАВЕРШИТИ ТА ЗБЕРЕГТИ ЗМІНУ</button>
     </div>
 
-    <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ccc;">
-
     <div class="history-header">
-        <h2>📊 Історія та Статистика</h2>
-        <button class="btn-clear-all" onclick="clearAllHistory()">Очистити всю історію</button>
+        <h2 style="margin:0; border:0;">📋 ІСТОРІЯ</h2>
+        <button class="btn-clear-all" onclick="clearAllHistory()">ОЧИСТИТИ ВСЕ</button>
     </div>
 
     <div class="stats-box">
-        <h3 style="margin: 0; text-align: center; color: #2e7d32;" id="stats-month-title">Підсумок за поточний місяць</h3>
+        <h3 style="margin: 0; text-align: center; color: var(--np-red); font-size:16px;" id="stats-month-title">ПІДСУМОК МІСЯЦЯ</h3>
         <div class="stats-grid">
             <div class="stats-item">
-                <span>Заробіток</span>
+                <span>ЗАРОБІТОК</span>
                 <strong id="month-earnings">0.00 грн</strong>
             </div>
             <div class="stats-item">
-                <span>Загальна вага</span>
+                <span>ЗАГАЛЬНА ВАГА</span>
                 <strong id="month-weight">0.00 кг</strong>
             </div>
             <div class="stats-item">
-                <span>Всього ЕН</span>
+                <span>ВСЬОГО ЕН</span>
                 <strong id="month-en">0</strong>
             </div>
             <div class="stats-item">
-                <span>Всього адрес</span>
+                <span>АДРЕСИ</span>
                 <strong id="month-addresses">0</strong>
             </div>
         </div>
@@ -116,84 +203,49 @@
     <table class="history-table">
         <thead>
             <tr>
-                <th>Дата</th>
-                <th>Адреси</th>
-                <th>ЕН</th>
-                <th>Сума</th>
-                <th>Дія</th>
+                <th>ДАТА</th>
+                <th>АДР/ЕН</th>
+                <th>ВАГА</th>
+                <th>СУМА</th>
+                <th>🗑️</th>
             </tr>
         </thead>
-        <tbody id="history-rows">
-            </tbody>
+        <tbody id="history-rows"></tbody>
     </table>
 
     <div class="backup-section">
-        <h4 style="margin: 0; color: #455a64;">💾 Резервне копіювання даних</h4>
-        <p style="font-size: 11px; color: #78909c; margin: 5px 0;">Зберігайте файл копії, щоб статистика не зникла при очищенні телефону</p>
-        <div class="backup-btns">
-            <button class="btn-backup" onclick="exportBackup()">Скачати копію даних</button>
-            <button class="btn-backup" onclick="document.getElementById('importFile').click()">Відновити з файлу</button>
-            <input type="file" id="importFile" style="display:none" onchange="importBackup(this)">
+        <p style="font-size: 12px; font-weight: bold; margin: 0;">💾 РЕЗЕРВНА КОПІЯ ДАНИХ</p>
+        <div style="display:flex; gap:10px; justify-content:center;">
+            <button class="btn-backup" onclick="exportBackup()">СКАЧАТИ</button>
+            <button class="btn-backup" onclick="document.getElementById('importFile').click()">ВІДНОВИТИ</button>
         </div>
+        <input type="file" id="importFile" style="display:none" onchange="importBackup(this)">
     </div>
 </div>
 
 <script>
     const BASE_STRIKE = 245;
     const TARIF_EN = 0.24;
-
     let currentAddresses = [];
 
     function calculateAddressCost(weight, enCount) {
-        let tariffAddress = 0;
-        let tariffWeightPerKg = 0;
-
-        if (weight >= 0 && weight <= 1) {
-            tariffAddress = 5.5;
-            tariffWeightPerKg = 0.03;
-        } else if (weight > 1 && weight <= 30) {
-            tariffAddress = 7.5;
-            tariffWeightPerKg = 0.03;
-        } else if (weight > 30 && weight <= 200) {
-            tariffAddress = 16.5;
-            tariffWeightPerKg = 0.11;
-        } else if (weight > 200) {
-            tariffAddress = 16.5;
-            tariffWeightPerKg = 0.06;
-        }
-
-        const costForAddress = tariffAddress + (weight * tariffWeightPerKg);
-        const costForEN = enCount * TARIF_EN;
-
-        return costForAddress + costForEN;
+        let tAddr = 0, tW = 0;
+        if (weight >= 0 && weight <= 1) { tAddr = 5.5; tW = 0.03; }
+        else if (weight > 1 && weight <= 30) { tAddr = 7.5; tW = 0.03; }
+        else if (weight > 30 && weight <= 200) { tAddr = 16.5; tW = 0.11; }
+        else if (weight > 200) { tAddr = 16.5; tW = 0.06; }
+        return tAddr + (weight * tW) + (enCount * TARIF_EN);
     }
 
     function addAddress() {
-        const titleInput = document.getElementById('address-title');
-        const weightInput = document.getElementById('weight');
-        const enInput = document.getElementById('en-count');
-        
-        let title = titleInput.value.trim();
-        const weight = parseFloat(weightInput.value);
-        
-        let enCount = enInput.value.trim() === "" ? 1 : parseInt(enInput.value);
-
-        if (isNaN(weight) || weight < 0 || isNaN(enCount) || enCount < 0) {
-            alert("Будь ласка, введіть коректну вагу");
-            return;
-        }
-
-        if (title === "") {
-            title = `Адреса №${currentAddresses.length + 1}`;
-        }
-
+        const tIn = document.getElementById('address-title'), wIn = document.getElementById('weight'), eIn = document.getElementById('en-count');
+        const weight = parseFloat(wIn.value);
+        let enCount = eIn.value.trim() === "" ? 1 : parseInt(eIn.value);
+        if (isNaN(weight) || weight < 0) { alert("Вкажіть вагу!"); return; }
+        let title = tIn.value.trim() || `Адреса №${currentAddresses.length + 1}`;
         const cost = calculateAddressCost(weight, enCount);
         currentAddresses.push({ title, weight, enCount, cost });
-        
-        titleInput.value = '';
-        weightInput.value = '';
-        enInput.value = '';
-
+        tIn.value = ''; wIn.value = ''; eIn.value = '';
         updateLiveUI();
     }
 
@@ -203,159 +255,104 @@
     }
 
     function updateLiveUI() {
-        let total = BASE_STRIKE;
-        let totalEN = 0;
-        let totalWeight = 0;
-
-        currentAddresses.forEach(addr => {
-            total += addr.cost;
-            totalEN += addr.enCount;
-            totalWeight += addr.weight;
-        });
-
+        let total = BASE_STRIKE, en = 0, weight = 0;
+        currentAddresses.forEach(a => { total += a.cost; en += a.enCount; weight += a.weight; });
         document.getElementById('live-total').innerText = total.toFixed(2);
         document.getElementById('live-addresses').innerText = currentAddresses.length;
-        document.getElementById('live-en').innerText = totalEN;
-        document.getElementById('live-weight').innerText = totalWeight.toFixed(2);
-
+        document.getElementById('live-en').innerText = en;
+        document.getElementById('live-weight').innerText = weight.toFixed(2);
         const log = document.getElementById('addresses-log');
+        if(currentAddresses.length === 0) {
+            log.innerHTML = '<p style="text-align:center; color:#999; font-size:13px; padding-top:10px;">Список адрес порожній</p>';
+            return;
+        }
         log.innerHTML = '';
-        currentAddresses.forEach((addr, index) => {
+        currentAddresses.forEach((a, i) => {
             log.innerHTML += `<div class="address-item">
-                <div class="address-info">
-                    <span class="address-name">${addr.title}</span>
-                    <span class="address-details">${addr.weight} кг | ${addr.enCount} ЕН</span>
-                </div>
-                <div>
-                    <strong style="margin-right: 15px;">+${addr.cost.toFixed(2)} грн</strong>
-                    <span class="delete-btn" onclick="deleteAddress(${index})">❌</span>
+                <div class="address-info"><span class="address-name">${a.title}</span><br>
+                <span class="address-details">${a.weight} кг | ${a.enCount} ЕН</span></div>
+                <div style="display:flex; align-items:center;">
+                    <strong style="color:var(--np-red); margin-right:10px;">+${a.cost.toFixed(2)}</strong>
+                    <span class="delete-btn" onclick="deleteAddress(${i})">×</span>
                 </div>
             </div>`;
         });
     }
 
     function saveShift() {
-        if (currentAddresses.length === 0) {
-            alert("Додайте хоча б одну адресу перед збереженням!");
-            return;
-        }
-
-        let totalEarnings = BASE_STRIKE;
-        let totalEN = 0;
-        let totalWeight = 0;
-        
-        currentAddresses.forEach(addr => {
-            totalEarnings += addr.cost;
-            totalEN += addr.enCount;
-            totalWeight += addr.weight;
-        });
-
+        if (currentAddresses.length === 0) { alert("Додайте адреси!"); return; }
+        let earnings = BASE_STRIKE, en = 0, weight = 0;
+        currentAddresses.forEach(a => { earnings += a.cost; en += a.enCount; weight += a.weight; });
         const now = new Date();
-        const newShift = {
+        const shift = {
             id: Date.now(),
-            date: now.toLocaleDateString('uk-UA'),
+            date: now.toLocaleDateString('uk-UA').slice(0,5), // Формат DD.MM
             monthYear: `${now.getMonth() + 1}.${now.getFullYear()}`,
-            addressesCount: currentAddresses.length,
-            enCount: totalEN,
-            weight: totalWeight,
-            earnings: parseFloat(totalEarnings.toFixed(2))
+            count: currentAddresses.length,
+            en: en,
+            weight: weight,
+            earnings: parseFloat(earnings.toFixed(2))
         };
-
         let history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
-        history.unshift(newShift); 
+        history.unshift(shift);
         localStorage.setItem('shiftHistory', JSON.stringify(history));
-
-        currentAddresses = [];
-        updateLiveUI();
-        loadHistory();
-        alert("Зміну успішно збережено!");
+        currentAddresses = []; updateLiveUI(); loadHistory();
+        alert("Дані збережено!");
     }
 
     function loadHistory() {
         const history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
         const tbody = document.getElementById('history-rows');
+        const now = new Date(), curMY = `${now.getMonth() + 1}.${now.getFullYear()}`;
+        const months = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
+        document.getElementById('stats-month-title').innerText = `ПІДСУМОК: ${months[now.getMonth()].toUpperCase()} ${now.getFullYear()}`;
+
+        let mE = 0, mW = 0, mEn = 0, mAdd = 0;
         tbody.innerHTML = '';
-
-        const now = new Date();
-        const currentMonthYear = `${now.getMonth() + 1}.${now.getFullYear()}`;
-        
-        const monthNames = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
-        document.getElementById('stats-month-title').innerText = `📊 Підсумок за ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-
-        let mEarnings = 0;
-        let mWeight = 0;
-        let mEN = 0;
-        let mAddresses = 0;
-
-        history.forEach(shift => {
-            if (shift.monthYear === currentMonthYear) {
-                mEarnings += shift.earnings;
-                mWeight += shift.weight || 0;
-                mEN += shift.enCount;
-                mAddresses += shift.addressesCount;
-            }
-
+        history.forEach(s => {
+            if (s.monthYear === curMY) { mE += s.earnings; mW += s.weight; mEn += s.en; mAdd += s.count; }
             tbody.innerHTML += `<tr>
-                <td>${shift.date}</td>
-                <td>${shift.addressesCount}</td>
-                <td>${shift.enCount}</td>
-                <td><strong>${shift.earnings.toFixed(2)} грн</strong></td>
-                <td><button class="btn-danger" onclick="deleteShift(${shift.id})">Видалити</button></td>
+                <td><b>${s.date}</b></td>
+                <td>${s.count}/${s.en}</td>
+                <td style="color:#666">${s.weight.toFixed(1)} кг</td>
+                <td><b>${s.earnings.toFixed(0)}</b></td>
+                <td><span style="color:#ccc; cursor:pointer" onclick="deleteShift(${s.id})">🗑️</span></td>
             </tr>`;
         });
-
-        document.getElementById('month-earnings').innerText = `${mEarnings.toFixed(2)} грн`;
-        document.getElementById('month-weight').innerText = `${mWeight.toFixed(2)} кг`;
-        document.getElementById('month-en').innerText = mEN;
-        document.getElementById('month-addresses').innerText = mAddresses;
+        document.getElementById('month-earnings').innerText = `${mE.toFixed(2)} грн`;
+        document.getElementById('month-weight').innerText = `${mW.toFixed(2)} кг`;
+        document.getElementById('month-en').innerText = mEn;
+        document.getElementById('month-addresses').innerText = mAdd;
     }
 
     function deleteShift(id) {
-        if (confirm("Ви впевнені, що хочете видалити цей звіт з історії?")) {
+        if (confirm("Видалити цей день?")) {
             let history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
-            history = history.filter(shift => shift.id !== id);
-            localStorage.setItem('shiftHistory', JSON.stringify(history));
+            localStorage.setItem('shiftHistory', JSON.stringify(history.filter(s => s.id !== id)));
             loadHistory();
         }
     }
 
     function clearAllHistory() {
-        if (confirm("УВАГА! Це повністю видалить ВСЮ збережену статистику. Ви впевнені?")) {
-            localStorage.removeItem('shiftHistory');
-            loadHistory();
-        }
+        if (confirm("Видалити ВСЮ історію?")) { localStorage.removeItem('shiftHistory'); loadHistory(); }
     }
 
     function exportBackup() {
-        const history = localStorage.getItem('shiftHistory');
-        if (!history || history === "[]") {
-            alert("Немає даних для збереження копії!");
-            return;
-        }
-        const blob = new Blob([history], { type: "application/json" });
+        const h = localStorage.getItem('shiftHistory');
+        if (!h || h === "[]") return;
+        const blob = new Blob([h], { type: "application/json" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `backup_calculator_${new Date().toLocaleDateString('uk-UA')}.json`;
+        a.download = `NP_Backup_${new Date().toLocaleDateString()}.json`;
         a.click();
     }
 
     function importBackup(input) {
-        const file = input.files[0];
-        if (!file) return;
+        const file = input.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = JSON.parse(e.target.result);
-                if (Array.isArray(data)) {
-                    localStorage.setItem('shiftHistory', JSON.stringify(data));
-                    loadHistory();
-                    alert("Дані успішно відновлено!");
-                } else {
-                    alert("Некоректний формат файлу копії");
-                }
-            } catch (err) {
-                alert("Помилка при читанні файлу");
-            }
+        reader.onload = (e) => {
+            const data = JSON.parse(e.target.result);
+            if (Array.isArray(data)) { localStorage.setItem('shiftHistory', JSON.stringify(data)); loadHistory(); alert("Відновлено!"); }
         };
         reader.readAsText(file);
     }
