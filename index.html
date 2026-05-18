@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор Експедитора</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { text-align: center; color: #d32f2f; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background-color: #d32f2f; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #b71c1c; }
+        .btn-secondary { background-color: #555; margin-top: 10px; }
+        .btn-secondary:hover { background-color: #333; }
+        .btn-danger { background-color: #757575; font-size: 12px; padding: 5px 10px; width: auto; }
+        .btn-danger:hover { background-color: #c62828; }
+        .btn-clear-all { background-color: #757575; font-size: 14px; padding: 8px; width: auto; }
+        .btn-clear-all:hover { background-color: #424242; }
+        .result-box { background: #ffebee; padding: 15px; border-radius: 5px; margin-top: 20px; border-left: 5px solid #d32f2f; }
+        .stats-box { background: #e8f5e9; padding: 15px; border-radius: 5px; margin-top: 15px; border-left: 5px solid #2e7d32; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .stats-item { background: white; padding: 10px; border-radius: 5px; border: 1px solid #c8e6c9; text-align: center; }
+        .stats-item span { display: block; font-size: 12px; color: #666; }
+        .stats-item strong { font-size: 16px; color: #2e7d32; }
+        .address-list { margin-top: 15px; max-height: 250px; overflow-y: auto; background: #fafafa; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .address-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px; }
+        .address-info { display: flex; flex-direction: column; }
+        .address-name { font-weight: bold; color: #333; }
+        .address-details { font-size: 12px; color: #666; }
+        .delete-btn { color: #d32f2f; cursor: pointer; font-weight: bold; padding: 0 10px; font-size: 16px; }
+        .delete-btn:hover { color: #b71c1c; transform: scale(1.2); }
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .history-table th, .history-table td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 14px; }
+        .history-table th { background-color: #f2f2f2; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; }
+        .backup-section { margin-top: 30px; background: #eceff1; padding: 15px; border-radius: 5px; border: 1px solid #b0bec5; text-align: center; }
+        .backup-btns { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+        .btn-backup { background-color: #607d8b; font-size: 12px; width: auto; padding: 8px 12px; }
+        .btn-backup:hover { background-color: #455a64; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚚 Калькулятор Зміни</h1>
+    
+    <div id="current-shift">
+        <h2>Поточна зміна</h2>
+        <p><strong>Базова ставка:</strong> 245 грн (включено)</p>
+        
+        <div class="form-group">
+            <label for="address-title">Назва адреси / Орієнтир (необов'язково):</label>
+            <input type="text" id="address-title" placeholder="Наприклад: Хрещатик 1 або ЖК Парковий">
+        </div>
+
+        <div class="form-group">
+            <label for="weight">Вага вантажу на адресі (кг):</label>
+            <input type="number" id="weight" step="0.01" placeholder="Наприклад: 12.5">
+        </div>
+        
+        <div class="form-group">
+            <label for="en-count">Кількість ЕН на цій адресі:</label>
+            <input type="number" id="en-count" placeholder="Якщо порожньо — порахує як 1">
+        </div>
+        
+        <button onclick="addAddress()">Додати адресу</button>
+        
+        <h3>Додані адреси за сьогодні:</h3>
+        <div class="address-list" id="addresses-log">
+            </div>
+        
+        <div class="result-box">
+            <h3>Поточний заробіток: <span id="live-total">245.00</span> грн</h3>
+            <p>Адрес: <span id="live-addresses">0</span> | Всього ЕН: <span id="live-en">0</span></p>
+        </div>
+        
+        <button class="btn-secondary" onclick="saveShift()">Зберегти зміну в статистику</button>
+    </div>
+
+    <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ccc;">
+
+    <div class="history-header">
+        <h2>📊 Історія та Статистика</h2>
+        <button class="btn-clear-all" onclick="clearAllHistory()">Очистити всю історію</button>
+    </div>
+
+    <div class="stats-box">
+        <h3 style="margin: 0; text-align: center; color: #2e7d32;" id="stats-month-title">Підсумок за поточний місяць</h3>
+        <div class="stats-grid">
+            <div class="stats-item">
+                <span>Заробіток</span>
+                <strong id="month-earnings">0.00 грн</strong>
+            </div>
+            <div class="stats-item">
+                <span>Загальна вага</span>
+                <strong id="month-weight">0.00 кг</strong>
+            </div>
+            <div class="stats-item">
+                <span>Всього ЕН</span>
+                <strong id="month-en">0</strong>
+            </div>
+            <div class="stats-item">
+                <span>Всього адрес</span>
+                <strong id="month-addresses">0</strong>
+            </div>
+        </div>
+    </div>
+    
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th>Дата</th>
+                <th>Адреси</th>
+                <th>ЕН</th>
+                <th>Сума</th>
+                <th>Дія</th>
+            </tr>
+        </thead>
+        <tbody id="history-rows">
+            </tbody>
+    </table>
+
+    <div class="backup-section">
+        <h4 style="margin: 0; color: #455a64;">💾 Резервне копіювання даних</h4>
+        <p style="font-size: 11px; color: #78909c; margin: 5px 0;">Зберігайте файл копії, щоб статистика не зникла при очищенні телефону</p>
+        <div class="backup-btns">
+            <button class="btn-backup" onclick="exportBackup()">Скачати копію даних</button>
+            <button class="btn-backup" onclick="document.getElementById('importFile').click()">Відновити з файлу</button>
+            <input type="file" id="importFile" style="display:none" onchange="importBackup(this)">
+        </div>
+    </div>
+</div>
+
+<script>
+    const BASE_STRIKE = 245;
+    const TARIF_EN = 0.24;
+
+    let currentAddresses = [];
+
+    function calculateAddressCost(weight, enCount) {
+        let tariffAddress = 0;
+        let tariffWeightPerKg = 0;
+
+        if (weight >= 0 && weight <= 1) {
+            tariffAddress = 5.5;
+            tariffWeightPerKg = 0.03;
+        } else if (weight > 1 && weight <= 30) {
+            tariffAddress = 7.5;
+            tariffWeightPerKg = 0.03;
+        } else if (weight > 30 && weight <= 200) {
+            tariffAddress = 16.5;
+            tariffWeightPerKg = 0.11;
+        } else if (weight > 200) {
+            tariffAddress = 16.5;
+            tariffWeightPerKg = 0.06;
+        }
+
+        const costForAddress = tariffAddress + (weight * tariffWeightPerKg);
+        const costForEN = enCount * TARIF_EN;
+
+        return costForAddress + costForEN;
+    }
+
+    function addAddress() {
+        const titleInput = document.getElementById('address-title');
+        const weightInput = document.getElementById('weight');
+        const enInput = document.getElementById('en-count');
+        
+        let title = titleInput.value.trim();
+        const weight = parseFloat(weightInput.value);
+        
+        let enCount = enInput.value.trim() === "" ? 1 : parseInt(enInput.value);
+
+        if (isNaN(weight) || weight < 0 || isNaN(enCount) || enCount < 0) {
+            alert("Будь ласка, введіть коректну вагу");
+            return;
+        }
+
+        if (title === "") {
+            title = `Адреса №${currentAddresses.length + 1}`;
+        }
+
+        const cost = calculateAddressCost(weight, enCount);
+        currentAddresses.push({ title, weight, enCount, cost });
+        
+        titleInput.value = '';
+        weightInput.value = '';
+        enInput.value = '';
+
+        updateLiveUI();
+    }
+
+    function deleteAddress(index) {
+        currentAddresses.splice(index, 1);
+        updateLiveUI();
+    }
+
+    function updateLiveUI() {
+        let total = BASE_STRIKE;
+        let totalEN = 0;
+
+        currentAddresses.forEach(addr => {
+            total += addr.cost;
+            totalEN += addr.enCount;
+        });
+
+        document.getElementById('live-total').innerText = total.toFixed(2);
+        document.getElementById('live-addresses').innerText = currentAddresses.length;
+        document.getElementById('live-en').innerText = totalEN;
+
+        const log = document.getElementById('addresses-log');
+        log.innerHTML = '';
+        currentAddresses.forEach((addr, index) => {
+            log.innerHTML += `<div class="address-item">
+                <div class="address-info">
+                    <span class="address-name">${addr.title}</span>
+                    <span class="address-details">${addr.weight} кг | ${addr.enCount} ЕН</span>
+                </div>
+                <div>
+                    <strong style="margin-right: 15px;">+${addr.cost.toFixed(2)} грн</strong>
+                    <span class="delete-btn" onclick="deleteAddress(${index})">❌</span>
+                </div>
+            </div>`;
+        });
+    }
+
+    function saveShift() {
+        if (currentAddresses.length === 0) {
+            alert("Додайте хоча б одну адресу перед збереженням!");
+            return;
+        }
+
+        let totalEarnings = BASE_STRIKE;
+        let totalEN = 0;
+        let totalWeight = 0;
+        
+        currentAddresses.forEach(addr => {
+            totalEarnings += addr.cost;
+            totalEN += addr.enCount;
+            totalWeight += addr.weight;
+        });
+
+        const now = new Date();
+        const newShift = {
+            id: Date.now(),
+            date: now.toLocaleDateString('uk-UA'),
+            monthYear: `${now.getMonth() + 1}.${now.getFullYear()}`,
+            addressesCount: currentAddresses.length,
+            enCount: totalEN,
+            weight: totalWeight,
+            earnings: parseFloat(totalEarnings.toFixed(2))
+        };
+
+        let history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
+        history.unshift(newShift); 
+        localStorage.setItem('shiftHistory', JSON.stringify(history));
+
+        currentAddresses = [];
+        updateLiveUI();
+        loadHistory();
+        alert("Зміну успішно збережено!");
+    }
+
+    function loadHistory() {
+        const history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
+        const tbody = document.getElementById('history-rows');
+        tbody.innerHTML = '';
+
+        const now = new Date();
+        const currentMonthYear = `${now.getMonth() + 1}.${now.getFullYear()}`;
+        
+        const monthNames = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
+        document.getElementById('stats-month-title').innerText = `📊 Підсумок за ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
+        let mEarnings = 0;
+        let mWeight = 0;
+        let mEN = 0;
+        let mAddresses = 0;
+
+        history.forEach(shift => {
+            if (shift.monthYear === currentMonthYear) {
+                mEarnings += shift.earnings;
+                mWeight += shift.weight || 0;
+                mEN += shift.enCount;
+                mAddresses += shift.addressesCount;
+            }
+
+            tbody.innerHTML += `<tr>
+                <td>${shift.date}</td>
+                <td>${shift.addressesCount}</td>
+                <td>${shift.enCount}</td>
+                <td><strong>${shift.earnings.toFixed(2)} грн</strong></td>
+                <td><button class="btn-danger" onclick="deleteShift(${shift.id})">Видалити</button></td>
+            </tr>`;
+        });
+
+        document.getElementById('month-earnings').innerText = `${mEarnings.toFixed(2)} грн`;
+        document.getElementById('month-weight').innerText = `${mWeight.toFixed(2)} кг`;
+        document.getElementById('month-en').innerText = mEN;
+        document.getElementById('month-addresses').innerText = mAddresses;
+    }
+
+    function deleteShift(id) {
+        if (confirm("Ви впевнені, що хочете видалити цей звіт з історії?")) {
+            let history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
+            history = history.filter(shift => shift.id !== id);
+            localStorage.setItem('shiftHistory', JSON.stringify(history));
+            loadHistory();
+        }
+    }
+
+    function clearAllHistory() {
+        if (confirm("УВАГА! Це повністю видалить ВСЮ збережену статистику. Ви впевнені?")) {
+            localStorage.removeItem('shiftHistory');
+            loadHistory();
+        }
+    }
+
+    // Експорт копії даних у файл
+    function exportBackup() {
+        const history = localStorage.getItem('shiftHistory');
+        if (!history || history === "[]") {
+            alert("Немає даних для збереження копії!");
+            return;
+        }
+        const blob = new Blob([history], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `backup_calculator_${new Date().toLocaleDateString('uk-UA')}.json`;
+        a.click();
+    }
+
+    // Імпорт даних із файлу копії
+    function importBackup(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (Array.isArray(data)) {
+                    localStorage.setItem('shiftHistory', JSON.stringify(data));
+                    loadHistory();
+                    alert("Дані успішно відновлено!");
+                } else {
+                    alert("Некоректний формат файлу копії");
+                }
+            } catch (err) {
+                alert("Помилка при читанні файлу");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    window.onload = loadHistory;
+</script>
+
+</body>
+</html>
