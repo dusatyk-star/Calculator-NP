@@ -6,7 +6,6 @@
     <title>NP Expeditor Calc Pro</title>
     
     <link rel="icon" type="image/png" href="https://vsetut.pl/uploads/news/images/840_460/1449673418-novaposhta.png">
-    <link rel="apple-touch-icon" href="https://vsetut.pl/uploads/news/images/840_460/1449673418-novaposhta.png">
     
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
@@ -21,8 +20,9 @@
         input { width: 100%; padding: 10px; border: 1px solid var(--np-border); border-radius: 6px; box-sizing: border-box; font-size: 15px; outline-color: var(--np-red); }
         button { width: 100%; padding: 12px; background-color: var(--np-red); color: white; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; font-weight: bold; }
         button:active { opacity: 0.8; }
-        .btn-scan { background-color: #2e7d32; margin-bottom: 20px; font-size: 16px; padding: 15px; border: 2px solid #1b5e20; }
+        .btn-scan { background-color: #2e7d32; margin-bottom: 10px; font-size: 16px; padding: 15px; border: 2px solid #1b5e20; }
         .btn-scan:hover { background-color: #1b5e20; }
+        .debug-toggle { display: block; text-align: center; font-size: 12px; color: #666; margin-bottom: 20px; background: #fff3cd; padding: 8px; border-radius: 6px; border: 1px solid #ffeeba; }
         .btn-secondary { background-color: var(--np-dark); margin-top: 10px; }
         .btn-danger { background-color: #757575; font-size: 11px; padding: 6px 8px; width: auto; color: white; border-radius: 4px; }
         .btn-clear-all { background-color: var(--np-dark); font-size: 12px; padding: 8px; width: auto; }
@@ -56,6 +56,10 @@
     <button class="btn-scan" onclick="document.getElementById('scrFiles').click()">📸 АВТОВВЕДЕННЯ ЗІ СКРІНШОТІВ</button>
     <input type="file" id="scrFiles" accept="image/*" multiple style="display:none" onchange="scanScreenshots(this)">
     
+    <label class="debug-toggle">
+        <input type="checkbox" id="debug-mode"> 🛠 Показати текст, який бачить сканер (для налаштування)
+    </label>
+
     <div id="ocr-status">Очікування...</div>
     
     <div id="current-shift">
@@ -147,39 +151,44 @@
         const files = input.files;
         if (files.length === 0) return;
 
-        // Діагностика 1: Перевірка на завантаження бібліотеки
-        if (typeof Tesseract === 'undefined') {
-            alert("Помилка 1: Сканер не завантажився. Перевір підключення до інтернету або вимкни блокувальник реклами в Chrome.");
-            return;
-        }
-
+        const isDebug = document.getElementById('debug-mode').checked;
         const statusBox = document.getElementById('ocr-status');
         statusBox.style.display = 'block';
         statusBox.style.background = "#fff3cd";
         statusBox.style.color = "#856404";
-        statusBox.innerText = `⏳ Запуск... (У перший раз це може тривати до 15 секунд, завантажується мовний пакет)`;
 
         let successCount = 0;
 
         try {
             for (let i = 0; i < files.length; i++) {
-                statusBox.innerText = `🔄 Аналіз фото ${i + 1} з ${files.length}... Не закривайте програму.`;
+                statusBox.innerText = `🔄 Аналіз фото ${i + 1} з ${files.length}... Не закривайте.`;
                 
                 const file = files[i];
                 const { data: { text } } = await Tesseract.recognize(file, 'ukr+eng');
                 
-                let cleanText = text.replace(/Материнська[^\n]*/gi, '');
+                // ДІАГНОСТИКА: Виводимо сирий текст на екран, якщо стоїть галочка
+                if (isDebug) {
+                    alert(`СИРИЙ ТЕКСТ З ФОТО ${i + 1}:\n\n------------------\n${text}\n------------------\n\nСкопіюй цей текст або зроби скріншот, якщо дані не розпізнаються!`);
+                }
+
+                // Видаляємо довгі штрих-коди та номери, щоб не збивали з пантелику
+                let cleanText = text.replace(/\d{11,15}/g, '');
                 
+                // Видаляємо материнську ЕН
+                cleanText = cleanText.replace(/Материнська[^\n]*/gi, '');
+                
+                // Пошук ваги
                 let weight = 0;
-                const weightMatch = cleanText.match(/(?:Вага|Bara|bara|вага)\s*:\s*([\d.,\s]+)/i);
+                const weightMatch = cleanText.match(/(?:Вага|Bara|bara|вага|Ваrа|Bar\s*:)[^\d]*([\d.,]+)/i);
                 if (weightMatch) {
                     weight = parseFloat(weightMatch[1].replace(/\s/g, '').replace(',', '.'));
                 }
 
+                // ПОСИЛЕНИЙ ПОШУК ЕН (шукає ЕН, EH, Е Н, E H і бере число поруч, обмежуючи 3 цифрами)
                 let enCount = 1;
-                const enMatch = cleanText.match(/(?:ЕН|EH)\s*(\d+)/i);
+                const enMatch = cleanText.match(/(?:ЕН|EH|Е\s*Н|E\s*H)[^\d\n]{0,5}(\d{1,3})(?!\d)/i);
                 if (enMatch) { 
-                    enCount = parseInt(enMatch[1]) || 1; 
+                    enCount = parseInt(enMatch[1]); 
                 }
 
                 let title = `Адреса ${currentAddresses.length + 1}`;
@@ -188,8 +197,8 @@
                     const cost = calculateAddressCost(weight, enCount);
                     currentAddresses.push({ title, weight, enCount, cost });
                     successCount++;
-                } else {
-                    alert(`На скріншоті ${i + 1} не вдалося знайти слово "Вага".`);
+                } else if (!isDebug) {
+                    alert(`На скріншоті ${i + 1} не вдалося розпізнати вагу.`);
                 }
             }
 
@@ -199,9 +208,8 @@
             setTimeout(() => { statusBox.style.display = 'none'; }, 4000);
 
         } catch (err) {
-            // Діагностика 2: Перехоплення будь-яких помилок движка
             alert(`Помилка під час сканування: ${err.message || err}`);
-            statusBox.innerText = `❌ Помилка сканування.`;
+            statusBox.innerText = `❌ Помилка.`;
         }
         
         input.value = '';
