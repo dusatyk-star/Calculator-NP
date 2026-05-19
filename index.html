@@ -249,6 +249,21 @@
     const TARIF_EN = 0.24;
     let currentAddresses = [];
 
+    // Перевірка працездатності пам'яті браузера
+    try {
+        localStorage.setItem('test_storage', '1');
+        localStorage.removeItem('test_storage');
+    } catch (e) {
+        alert("Увага! Ваш браузер блокує збереження даних (можливо увімкнено режим Інкогніто). Дані будуть зникати при оновленні сторінки!");
+    }
+
+    // Завантаження незавершеної поточної зміни, щоб вона не зникала при оновленні сторінки
+    if (localStorage.getItem('currentAddressesBackup')) {
+        try {
+            currentAddresses = JSON.parse(localStorage.getItem('currentAddressesBackup')) || [];
+        } catch(e) { currentAddresses = []; }
+    }
+
     function calculateAddressCost(weight, enCount) {
         let tAddr = 0, tW = 0;
         if (weight >= 0 && weight <= 1) { tAddr = 5.5; tW = 0.03; }
@@ -264,63 +279,42 @@
 
         const statusBox = document.getElementById('ocr-status');
         statusBox.style.display = 'block';
-        
         let successCount = 0;
 
         for (let i = 0; i < files.length; i++) {
             statusBox.innerText = `🔄 Обробка файлу ${i + 1} з ${files.length}...`;
-            
             try {
                 const file = files[i];
                 const { data: { text } } = await Tesseract.recognize(file, 'ukr+eng');
                 
-                // 1. Пошук ваги
                 let weight = 0;
                 const weightMatch = text.match(/(?:Вага|Bara|bara|вага)\s*:\s*([\d.,\s]+)/i);
                 if (weightMatch) {
                     weight = parseFloat(weightMatch[1].replace(/\s/g, '').replace(',', '.'));
                 }
 
-                // 2. Пошук кількості ЕН
                 let enCount = 1;
                 const enMatch = text.match(/(?:ЕН|EH)\s*(\d+)/i);
-                if (enMatch) {
-                    enCount = parseInt(enMatch[1]) || 1;
-                }
+                if (enMatch) { enCount = parseInt(enMatch[1]) || 1; }
 
-                // 3. Інтелектуальний алгоритм пошуку Прізвища
                 let title = "";
-                
-                // Розбиваємо весь текст на окремі рядки
                 const lines = text.split('\n');
                 for (let j = 0; j < lines.length; j++) {
                     const line = lines[j].trim();
-                    
-                    // Шукаємо рядок, який містить українські літери, починається з великої і схожий на прізвище
-                    // Ігноруємо системні слова застосунку, які можуть зчитатися поруч
                     if (line.match(/[А-ЯҐЄІЇ][а-яґєії]{3,}/) && 
                         !line.includes("Клієнт") && !line.includes("Кліент") &&
                         !line.includes("Приватна") && !line.includes("особа") && 
                         !line.includes("Заявка") && !line.includes("на") && !line.includes("забір") &&
                         !line.includes("Головна") && !line.includes("Деталізація") && !line.includes("Рахунок")) {
                         
-                        // Беремо найперше слово з цього рядка (це і є Прізвище)
                         let cleanWord = line.split(/\s+/)[0].replace(/[^а-яґєіїА-ЯҐЄІЇ]/g, '');
-                        if (cleanWord.length > 2) {
-                            title = cleanWord;
-                            break; // Знайшли — зупиняємо пошук
-                        }
+                        if (cleanWord.length > 2) { title = cleanWord; break; }
                     }
                 }
 
-                // Запасний план: якщо прізвище все одно пролетіло, шукаємо номер накладної (наприклад, 102-7815 0335)
                 if (!title) {
                     const barcodeMatch = text.match(/\d{3}-\d{4}\s*\d*/);
-                    if (barcodeMatch) {
-                        title = `№ ${barcodeMatch[0].trim()}`;
-                    } else {
-                        title = `Заявка №${currentAddresses.length + 1}`;
-                    }
+                    title = barcodeMatch ? `№ ${barcodeMatch[0].trim()}` : `Заявка №${currentAddresses.length + 1}`;
                 }
 
                 if (!isNaN(weight) && weight >= 0) {
@@ -328,16 +322,13 @@
                     currentAddresses.push({ title, weight, enCount, cost });
                     successCount++;
                 }
-
-            } catch (err) {
-                console.error("Помилка файлу:", err);
-            }
+            } catch (err) { console.error(err); }
         }
 
         statusBox.innerText = `✅ Додано ${successCount} адрес(и) успішно!`;
         setTimeout(() => { statusBox.style.display = 'none'; }, 4000);
-        
         input.value = '';
+        saveCurrentBackup();
         updateLiveUI();
     }
 
@@ -350,12 +341,18 @@
         const cost = calculateAddressCost(weight, enCount);
         currentAddresses.push({ title, weight, enCount, cost });
         tIn.value = ''; wIn.value = ''; eIn.value = '';
+        saveCurrentBackup();
         updateLiveUI();
     }
 
     function deleteAddress(index) {
         currentAddresses.splice(index, 1);
+        saveCurrentBackup();
         updateLiveUI();
+    }
+
+    function saveCurrentBackup() {
+        localStorage.setItem('currentAddressesBackup', JSON.stringify(currentAddresses));
     }
 
     function updateLiveUI() {
@@ -404,7 +401,10 @@
         let history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
         history.unshift(shift);
         localStorage.setItem('shiftHistory', JSON.stringify(history));
-        currentAddresses = []; updateLiveUI(); loadHistory();
+        
+        currentAddresses = [];
+        localStorage.removeItem('currentAddressesBackup');
+        updateLiveUI(); loadHistory();
         alert("Дані збережено!");
     }
 
@@ -472,7 +472,7 @@
         reader.readAsText(file);
     }
 
-    window.onload = loadHistory;
+    window.onload = function() { loadHistory(); updateLiveUI(); };
 </script>
 
 </body>
