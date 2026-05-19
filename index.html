@@ -14,7 +14,12 @@
 
     <style>
         :root { --np-red: #e30613; --np-dark: #231f20; --np-grey: #f2f2f2; --np-border: #d1d1d1; }
-        body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; background-color: var(--np-grey); margin: 0; padding: 15px; color: var(--np-dark); }
+     <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
+      body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; background-color: var(--np-grey); margin: 0; padding: 15px; color: var(--np-dark); }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 8px solid var(--np-red); }
         h1 { text-align: center; color: var(--np-red); text-transform: uppercase; font-size: 20px; letter-spacing: 1px; margin-bottom: 20px; }
         h2 { font-size: 16px; border-bottom: 2px solid var(--np-grey); padding-bottom: 8px; margin-top: 20px; text-transform: uppercase;}
