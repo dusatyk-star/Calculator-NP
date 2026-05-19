@@ -152,7 +152,6 @@
         const files = input.files;
         if (files.length === 0) return;
 
-        // МИТТЄВИЙ відгук інтерфейсу: показуємо жовту плашку відразу
         const statusBox = document.getElementById('ocr-status');
         statusBox.style.display = 'block';
         statusBox.style.background = "#fff3cd";
@@ -171,35 +170,55 @@
             for (let i = 0; i < files.length; i++) {
                 statusBox.innerText = `🔄 Розпізнавання фото ${i + 1} з ${files.length}... Зачекайте.`;
                 
-                // РЯТУВАЛЬНИЙ МЕТОД: створюємо віртуальне полегшене посилання на файл
                 const imageUrl = URL.createObjectURL(files[i]);
-                
-                // Запускаємо аналіз
                 const { data: { text } } = await Tesseract.recognize(imageUrl, 'ukr+eng');
-                
-                // Обов'язково звільняємо пам'ять телефону від посилання
                 URL.revokeObjectURL(imageUrl);
                 
                 if (isDebug) {
                     alert(`СИРИЙ ТЕКСТ З ФОТО ${i + 1}:\n\n------------------\n${text}\n------------------\n`);
                 }
 
-                // Очищення тексту від зайвих довгих цифр
+                // Видаляємо довгі цифри та материнську ЕН, щоб не заважали
                 let cleanText = text.replace(/\d{11,15}/g, '');
                 cleanText = cleanText.replace(/Материнська[^\n]*/gi, '');
                 
-                // 1. Шукаємо вагу
+                // 1. ПОШУК ВАГИ З "OCR-ЛІКАРЕМ"
                 let weight = 0;
-                const weightMatch = cleanText.match(/(?:Вага|Bara|bara|вага|Ваrа|Bar\s*:)[^\d]*([\d.,]+)/i);
-                if (weightMatch) {
-                    weight = parseFloat(weightMatch[1].replace(/\s/g, '').replace(',', '.'));
+                let wMatch = cleanText.match(/(?:Вага|Bara|bara|вага|Ваrа|Bar\s*:)/i);
+                if (wMatch) {
+                    // Беремо 15 символів одразу після слова "Вага"
+                    let wStart = wMatch.index + wMatch[0].length;
+                    let wChunk = cleanText.substring(wStart, wStart + 15);
+                    
+                    // Виправляємо букви, які сканер сплутав з цифрами (наприклад 5O,O -> 50.0)
+                    wChunk = wChunk.replace(/[oоОO]/g, '0').replace(/[sS]/g, '5').replace(/[lIіІi|]/g, '1')
+                                   .replace(/[зЗzZ]/g, '3').replace(/[bBьЬ]/g, '8').replace(/[qQgG]/g, '9')
+                                   .replace(',', '.');
+                    
+                    const wDigits = wChunk.match(/[\d.]+/);
+                    if (wDigits) { weight = parseFloat(wDigits[0]); }
                 }
 
-                // 2. Шукаємо кількість ЕН (Гнучка формула)
+                // 2. ПОШУК КІЛЬКОСТІ ЕН З "OCR-ЛІКАРЕМ"
                 let enCount = 1;
-                const enMatch = cleanText.match(/(?:ЕН|EH|Е\s*Н|E\s*H|E\s*X)[^\d\n]{0,6}(\d{1,3})(?!\d)/i);
-                if (enMatch) { 
-                    enCount = parseInt(enMatch[1]) || 1; 
+                let enMatch = cleanText.match(/(?:ЕН|EH|Е\s*Н|E\s*H|E\s*X)/i);
+                if (enMatch) {
+                    // Беремо 10 символів одразу після слова "ЕН" (там де наше " є9")
+                    let enStart = enMatch.index + enMatch[0].length;
+                    let enChunk = cleanText.substring(enStart, enStart + 12);
+                    
+                    // Магія: перетворюємо букви-друкарки назад у цифри (є -> 6)
+                    enChunk = enChunk.replace(/[єeеЄEЕ]/g, '6') 
+                                     .replace(/[oоОO]/g, '0')
+                                     .replace(/[зЗzZ]/g, '3')
+                                     .replace(/[lIіІi|]/g, '1')
+                                     .replace(/[sS]/g, '5')
+                                     .replace(/[bBьЬ]/g, '8')
+                                     .replace(/[qQgG]/g, '9');
+                    
+                    // Тепер спокійно беремо чисте число
+                    const enDigits = enChunk.match(/\d{1,3}/);
+                    if (enDigits) { enCount = parseInt(enDigits[0]) || 1; }
                 }
 
                 let title = `Адреса ${currentAddresses.length + 1}`;
