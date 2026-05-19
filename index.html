@@ -249,7 +249,6 @@
     const TARIF_EN = 0.24;
     let currentAddresses = [];
 
-    // Перевірка працездатності пам'яті браузера
     try {
         localStorage.setItem('test_storage', '1');
         localStorage.removeItem('test_storage');
@@ -257,11 +256,9 @@
         alert("Увага! Ваш браузер блокує збереження даних (можливо увімкнено режим Інкогніто). Дані будуть зникати при оновленні сторінки!");
     }
 
-    // Завантаження незавершеної поточної зміни, щоб вона не зникала при оновленні сторінки
     if (localStorage.getItem('currentAddressesBackup')) {
-        try {
-            currentAddresses = JSON.parse(localStorage.getItem('currentAddressesBackup')) || [];
-        } catch(e) { currentAddresses = []; }
+        try { currentAddresses = JSON.parse(localStorage.getItem('currentAddressesBackup')) || []; } 
+        catch(e) { currentAddresses = []; }
     }
 
     function calculateAddressCost(weight, enCount) {
@@ -283,50 +280,47 @@
 
         for (let i = 0; i < files.length; i++) {
             statusBox.innerText = `🔄 Обробка файлу ${i + 1} з ${files.length}...`;
+            
             try {
                 const file = files[i];
+                // Запускаємо розпізнавання (англійської достатньо для цифр і слова "Вага/Bara", це пришвидшить роботу)
                 const { data: { text } } = await Tesseract.recognize(file, 'ukr+eng');
                 
+                // ВАЖЛИВО: Очищаємо рядок з "Материнська ЕН", щоб він не плутав лічильник
+                let cleanText = text.replace(/Материнська[^\n]*/gi, '');
+                
+                // 1. Пошук ваги
                 let weight = 0;
-                const weightMatch = text.match(/(?:Вага|Bara|bara|вага)\s*:\s*([\d.,\s]+)/i);
+                const weightMatch = cleanText.match(/(?:Вага|Bara|bara|вага)\s*:\s*([\d.,\s]+)/i);
                 if (weightMatch) {
                     weight = parseFloat(weightMatch[1].replace(/\s/g, '').replace(',', '.'));
                 }
 
+                // 2. Пошук кількості ЕН (шукає вкладку)
                 let enCount = 1;
-                const enMatch = text.match(/(?:ЕН|EH)\s*(\d+)/i);
-                if (enMatch) { enCount = parseInt(enMatch[1]) || 1; }
-
-                let title = "";
-                const lines = text.split('\n');
-                for (let j = 0; j < lines.length; j++) {
-                    const line = lines[j].trim();
-                    if (line.match(/[А-ЯҐЄІЇ][а-яґєії]{3,}/) && 
-                        !line.includes("Клієнт") && !line.includes("Кліент") &&
-                        !line.includes("Приватна") && !line.includes("особа") && 
-                        !line.includes("Заявка") && !line.includes("на") && !line.includes("забір") &&
-                        !line.includes("Головна") && !line.includes("Деталізація") && !line.includes("Рахунок")) {
-                        
-                        let cleanWord = line.split(/\s+/)[0].replace(/[^а-яґєіїА-ЯҐЄІЇ]/g, '');
-                        if (cleanWord.length > 2) { title = cleanWord; break; }
-                    }
+                const enMatch = cleanText.match(/(?:ЕН|EH)\s*(\d+)/i);
+                if (enMatch) { 
+                    enCount = parseInt(enMatch[1]) || 1; 
                 }
 
-                if (!title) {
-                    const barcodeMatch = text.match(/\d{3}-\d{4}\s*\d*/);
-                    title = barcodeMatch ? `№ ${barcodeMatch[0].trim()}` : `Заявка №${currentAddresses.length + 1}`;
-                }
+                // 3. Спрощена назва за порядком
+                let title = `Адреса ${currentAddresses.length + 1}`;
 
+                // Додаємо адресу тільки якщо розпізналася хоча б вага
                 if (!isNaN(weight) && weight >= 0) {
                     const cost = calculateAddressCost(weight, enCount);
                     currentAddresses.push({ title, weight, enCount, cost });
                     successCount++;
                 }
-            } catch (err) { console.error(err); }
+
+            } catch (err) { 
+                console.error("Помилка файлу:", err); 
+            }
         }
 
         statusBox.innerText = `✅ Додано ${successCount} адрес(и) успішно!`;
         setTimeout(() => { statusBox.style.display = 'none'; }, 4000);
+        
         input.value = '';
         saveCurrentBackup();
         updateLiveUI();
@@ -337,9 +331,13 @@
         const weight = parseFloat(wIn.value);
         let enCount = eIn.value.trim() === "" ? 1 : parseInt(eIn.value);
         if (isNaN(weight) || weight < 0) { alert("Вкажіть вагу!"); return; }
-        let title = tIn.value.trim() || `Адреса №${currentAddresses.length + 1}`;
+        
+        // Якщо ручне поле порожнє, теж називаємо по порядку
+        let title = tIn.value.trim() || `Адреса ${currentAddresses.length + 1}`;
+        
         const cost = calculateAddressCost(weight, enCount);
         currentAddresses.push({ title, weight, enCount, cost });
+        
         tIn.value = ''; wIn.value = ''; eIn.value = '';
         saveCurrentBackup();
         updateLiveUI();
@@ -347,6 +345,14 @@
 
     function deleteAddress(index) {
         currentAddresses.splice(index, 1);
+        
+        // Опціонально: перераховуємо номери адрес після видалення, щоб не було дірок (Адреса 1, Адреса 3)
+        currentAddresses.forEach((addr, i) => {
+            if (addr.title.startsWith('Адреса ')) {
+                addr.title = `Адреса ${i + 1}`;
+            }
+        });
+        
         saveCurrentBackup();
         updateLiveUI();
     }
@@ -362,118 +368,14 @@
         document.getElementById('live-addresses').innerText = currentAddresses.length;
         document.getElementById('live-en').innerText = en;
         document.getElementById('live-weight').innerText = weight.toFixed(2);
+        
         const log = document.getElementById('addresses-log');
         if(currentAddresses.length === 0) {
             log.innerHTML = '<p style="text-align:center; color:#999; font-size:13px; padding-top:10px;">Список адрес порожній</p>';
             return;
         }
+        
         log.innerHTML = '';
         currentAddresses.forEach((a, i) => {
             log.innerHTML += `<div class="address-item">
-                <div class="address-info"><span class="address-name">${a.title}</span>
-                <span class="address-details">${a.weight} кг | ${a.enCount} ЕН</span></div>
-                <div style="display:flex; align-items:center;">
-                    <strong style="color:var(--np-red); margin-right:10px;">+${a.cost.toFixed(2)}</strong>
-                    <span class="delete-btn" onclick="deleteAddress(${i})">×</span>
-                </div>
-            </div>`;
-        });
-    }
-
-    function saveShift() {
-        if (currentAddresses.length === 0) { alert("Додайте адреси!"); return; }
-        let earnings = BASE_STRIKE, en = 0, weight = 0;
-        currentAddresses.forEach(a => { earnings += a.cost; en += a.enCount; weight += a.weight; });
-        const now = new Date();
-        const day = String(now.getDate()).padStart(2, '0');
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const dateStr = `${day}.${month}`;
-
-        const shift = {
-            id: Date.now(),
-            date: dateStr, 
-            monthYear: `${now.getMonth() + 1}.${now.getFullYear()}`,
-            count: parseInt(currentAddresses.length) || 0,
-            en: parseInt(en) || 0,
-            weight: parseFloat(weight) || 0,
-            earnings: parseFloat(earnings.toFixed(2))
-        };
-        let history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
-        history.unshift(shift);
-        localStorage.setItem('shiftHistory', JSON.stringify(history));
-        
-        currentAddresses = [];
-        localStorage.removeItem('currentAddressesBackup');
-        updateLiveUI(); loadHistory();
-        alert("Дані збережено!");
-    }
-
-    function loadHistory() {
-        const history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
-        const tbody = document.getElementById('history-rows');
-        const now = new Date(), curMY = `${now.getMonth() + 1}.${now.getFullYear()}`;
-        const months = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
-        document.getElementById('stats-month-title').innerText = `ПІДСУМОК: ${months[now.getMonth()].toUpperCase()} ${now.getFullYear()}`;
-
-        let mE = 0, mW = 0, mEn = 0, mAdd = 0;
-        tbody.innerHTML = '';
-        
-        history.forEach(s => {
-            const shiftCount = parseInt(s.count) || parseInt(s.addressesCount) || 0;
-            const shiftEn = parseInt(s.en) || parseInt(s.enCount) || 0;
-            const shiftWeight = parseFloat(s.weight) || 0;
-            const shiftEarnings = parseFloat(s.earnings) || 0;
-
-            if (s.monthYear === curMY) { mE += shiftEarnings; mW += shiftWeight; mEn += shiftEn; mAdd += shiftCount; }
-            
-            tbody.innerHTML += `<tr>
-                <td><b>${s.date || 'Зміна'}</b></td>
-                <td>${shiftCount}/${shiftEn}</td>
-                <td style="color:#666">${shiftWeight.toFixed(1)} кг</td>
-                <td><b>${shiftEarnings.toFixed(0)}</b></td>
-                <td><button class="btn-danger" onclick="deleteShift(${s.id})">🗑️</button></td>
-            </tr>`;
-        });
-        document.getElementById('month-earnings').innerText = `${mE.toFixed(2)} грн`;
-        document.getElementById('month-weight').innerText = `${mW.toFixed(2)} кг`;
-        document.getElementById('month-en').innerText = mEn;
-        document.getElementById('month-addresses').innerText = mAdd;
-    }
-
-    function deleteShift(id) {
-        if (confirm("Видалити цей день?")) {
-            let history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
-            localStorage.setItem('shiftHistory', JSON.stringify(history.filter(s => s.id !== id)));
-            loadHistory();
-        }
-    }
-
-    function clearAllHistory() {
-        if (confirm("Видалити ВСЮ історію?")) { localStorage.removeItem('shiftHistory'); loadHistory(); }
-    }
-
-    function exportBackup() {
-        const h = localStorage.getItem('shiftHistory');
-        if (!h || h === "[]") return;
-        const blob = new Blob([h], { type: "application/json" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `NP_Backup_${new Date().toLocaleDateString()}.json`;
-        a.click();
-    }
-
-    function importBackup(input) {
-        const file = input.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = JSON.parse(e.target.result);
-            if (Array.isArray(data)) { localStorage.setItem('shiftHistory', JSON.stringify(data)); loadHistory(); alert("Відновлено!"); }
-        };
-        reader.readAsText(file);
-    }
-
-    window.onload = function() { loadHistory(); updateLiveUI(); };
-</script>
-
-</body>
-</html>
+                <div class="address-info"><span class="address-name">${a
