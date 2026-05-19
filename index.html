@@ -11,140 +11,38 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
     <style>
-        :root {
-            --np-red: #e30613;
-            --np-dark: #231f20;
-            --np-grey: #f2f2f2;
-            --np-border: #d1d1d1;
-        }
-
-        body { 
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
-            background-color: var(--np-grey); 
-            margin: 0; 
-            padding: 15px; 
-            color: var(--np-dark); 
-        }
-
-        .container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            background: white; 
-            padding: 20px; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border-top: 8px solid var(--np-red);
-        }
-
-        h1 { 
-            text-align: center; 
-            color: var(--np-red); 
-            text-transform: uppercase;
-            font-size: 20px;
-            letter-spacing: 1px;
-            margin-bottom: 20px;
-        }
-
+        :root { --np-red: #e30613; --np-dark: #231f20; --np-grey: #f2f2f2; --np-border: #d1d1d1; }
+        body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; background-color: var(--np-grey); margin: 0; padding: 15px; color: var(--np-dark); }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 8px solid var(--np-red); }
+        h1 { text-align: center; color: var(--np-red); text-transform: uppercase; font-size: 20px; letter-spacing: 1px; margin-bottom: 20px; }
         h2 { font-size: 16px; border-bottom: 2px solid var(--np-grey); padding-bottom: 8px; margin-top: 20px; text-transform: uppercase;}
-
         .form-group { margin-bottom: 12px; }
         label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 13px; }
-        
-        input { 
-            width: 100%; 
-            padding: 10px; 
-            border: 1px solid var(--np-border); 
-            border-radius: 6px; 
-            box-sizing: border-box; 
-            font-size: 15px;
-            outline-color: var(--np-red);
-        }
-
-        button { 
-            width: 100%; 
-            padding: 12px; 
-            background-color: var(--np-red); 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            font-size: 15px; 
-            cursor: pointer; 
-            font-weight: bold;
-        }
-
+        input { width: 100%; padding: 10px; border: 1px solid var(--np-border); border-radius: 6px; box-sizing: border-box; font-size: 15px; outline-color: var(--np-red); }
+        button { width: 100%; padding: 12px; background-color: var(--np-red); color: white; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; font-weight: bold; }
         button:active { opacity: 0.8; }
-
         .btn-scan { background-color: #2e7d32; margin-bottom: 20px; font-size: 16px; padding: 15px; border: 2px solid #1b5e20; }
         .btn-scan:hover { background-color: #1b5e20; }
         .btn-secondary { background-color: var(--np-dark); margin-top: 10px; }
         .btn-danger { background-color: #757575; font-size: 11px; padding: 6px 8px; width: auto; color: white; border-radius: 4px; }
         .btn-clear-all { background-color: var(--np-dark); font-size: 12px; padding: 8px; width: auto; }
-
-        #ocr-status { 
-            display: none; 
-            background: #e8f5e9; 
-            color: #1b5e20; 
-            padding: 12px; 
-            border-radius: 6px; 
-            margin-bottom: 15px; 
-            font-size: 14px; 
-            text-align: center;
-            font-weight: bold;
-            border: 1px solid #a5d6a7;
-        }
-
-        .result-box { 
-            background: #fffafa; 
-            padding: 15px; 
-            border-radius: 8px; 
-            margin-top: 15px; 
-            border: 1px solid #ffcdd2;
-            text-align: center;
-        }
-
+        #ocr-status { display: none; background: #fff3cd; color: #856404; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 14px; text-align: center; font-weight: bold; border: 1px solid #ffeeba; }
+        .result-box { background: #fffafa; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #ffcdd2; text-align: center; }
         .result-box h3 { margin: 0; color: var(--np-red); font-size: 24px; }
         .result-box p { margin: 8px 0 0 0; font-size: 14px; color: #555; }
-
-        .stats-box { 
-            background: #fdfdfd; 
-            padding: 15px; 
-            border-radius: 8px; 
-            margin-top: 15px; 
-            border: 2px solid var(--np-red); 
-        }
-
+        .stats-box { background: #fdfdfd; padding: 15px; border-radius: 8px; margin-top: 15px; border: 2px solid var(--np-red); }
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
         .stats-item { background: var(--np-grey); padding: 10px; border-radius: 6px; text-align: center; }
         .stats-item span { display: block; font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 4px; }
         .stats-item strong { font-size: 15px; color: var(--np-dark); }
-
-        .address-list { 
-            margin-top: 15px; 
-            max-height: 220px; 
-            overflow-y: auto; 
-            background: #fff; 
-            padding: 5px; 
-            border: 1px solid var(--np-grey); 
-            border-radius: 6px; 
-        }
-
-        .address-item { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 10px; 
-            border-bottom: 1px solid var(--np-grey); 
-            font-size: 14px; 
-        }
-
+        .address-list { margin-top: 15px; max-height: 220px; overflow-y: auto; background: #fff; padding: 5px; border: 1px solid var(--np-grey); border-radius: 6px; }
+        .address-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid var(--np-grey); font-size: 14px; }
         .address-name { font-weight: bold; color: var(--np-dark); word-break: break-all; max-width: 70%; display: block; }
         .address-details { font-size: 12px; color: #777; }
         .delete-btn { color: var(--np-red); cursor: pointer; font-size: 18px; padding-left: 10px; }
-
         .history-table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         .history-table th { background-color: var(--np-red); color: white; padding: 10px 5px; font-size: 12px; font-weight: normal; }
         .history-table td { border: 1px solid var(--np-grey); padding: 10px 5px; text-align: center; font-size: 13px; }
-
         .history-header { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; }
         .backup-section { margin-top: 35px; background: #fff; padding: 15px; border-radius: 8px; border: 1px dashed var(--np-border); text-align: center; }
         .btn-backup { background-color: #666; font-size: 11px; width: auto; padding: 8px 12px; margin-top: 10px; color: white; }
@@ -153,18 +51,18 @@
 <body>
 
 <div class="container">
-    <h1>Нова Пошта: Експедитор + Автоскан</h1>
+    <h1>Нова Пошта: Експедитор</h1>
 
     <button class="btn-scan" onclick="document.getElementById('scrFiles').click()">📸 АВТОВВЕДЕННЯ ЗІ СКРІНШОТІВ</button>
     <input type="file" id="scrFiles" accept="image/*" multiple style="display:none" onchange="scanScreenshots(this)">
     
-    <div id="ocr-status">Обробка...</div>
+    <div id="ocr-status">Очікування...</div>
     
     <div id="current-shift">
         <h2>✍️ Ручне введення адреси</h2>
         <div class="form-group">
-            <label>📍 Назва адреси / Вулиця:</label>
-            <input type="text" id="address-title" placeholder="ЖК або назва вулиці">
+            <label>📍 Назва адреси:</label>
+            <input type="text" id="address-title" placeholder="Якщо порожньо — назве Адреса 1">
         </div>
         <div class="form-group">
             <label>⚖️ Вага вантажу (кг):</label>
@@ -202,34 +100,16 @@
     <div class="stats-box">
         <h3 style="margin: 0; text-align: center; color: var(--np-red); font-size:14px;" id="stats-month-title">ПІДСУМОК МІСЯЦЯ</h3>
         <div class="stats-grid">
-            <div class="stats-item">
-                <span>ЗАРОБІТОК</span>
-                <strong id="month-earnings">0.00 грн</strong>
-            </div>
-            <div class="stats-item">
-                <span>ЗАГАЛЬНА ВАГА</span>
-                <strong id="month-weight">0.00 кг</strong>
-            </div>
-            <div class="stats-item">
-                <span>ВСЬОГО ЕН</span>
-                <strong id="month-en">0</strong>
-            </div>
-            <div class="stats-item">
-                <span>АДРЕСИ</span>
-                <strong id="month-addresses">0</strong>
-            </div>
+            <div class="stats-item"><span>ЗАРОБІТОК</span><strong id="month-earnings">0.00 грн</strong></div>
+            <div class="stats-item"><span>ЗАГАЛЬНА ВАГА</span><strong id="month-weight">0.00 кг</strong></div>
+            <div class="stats-item"><span>ВСЬОГО ЕН</span><strong id="month-en">0</strong></div>
+            <div class="stats-item"><span>АДРЕСИ</span><strong id="month-addresses">0</strong></div>
         </div>
     </div>
     
     <table class="history-table">
         <thead>
-            <tr>
-                <th>ДАТА</th>
-                <th>АДР/ЕН</th>
-                <th>ВАГА</th>
-                <th>СУМА</th>
-                <th>🗑️</th>
-            </tr>
+            <tr><th>ДАТА</th><th>АДР/ЕН</th><th>ВАГА</th><th>СУМА</th><th>🗑️</th></tr>
         </thead>
         <tbody id="history-rows"></tbody>
     </table>
@@ -249,13 +129,6 @@
     const TARIF_EN = 0.24;
     let currentAddresses = [];
 
-    try {
-        localStorage.setItem('test_storage', '1');
-        localStorage.removeItem('test_storage');
-    } catch (e) {
-        alert("Увага! Ваш браузер блокує збереження даних (можливо увімкнено режим Інкогніто). Дані будуть зникати при оновленні сторінки!");
-    }
-
     if (localStorage.getItem('currentAddressesBackup')) {
         try { currentAddresses = JSON.parse(localStorage.getItem('currentAddressesBackup')) || []; } 
         catch(e) { currentAddresses = []; }
@@ -274,52 +147,62 @@
         const files = input.files;
         if (files.length === 0) return;
 
+        // Діагностика 1: Перевірка на завантаження бібліотеки
+        if (typeof Tesseract === 'undefined') {
+            alert("Помилка 1: Сканер не завантажився. Перевір підключення до інтернету або вимкни блокувальник реклами в Chrome.");
+            return;
+        }
+
         const statusBox = document.getElementById('ocr-status');
         statusBox.style.display = 'block';
+        statusBox.style.background = "#fff3cd";
+        statusBox.style.color = "#856404";
+        statusBox.innerText = `⏳ Запуск... (У перший раз це може тривати до 15 секунд, завантажується мовний пакет)`;
+
         let successCount = 0;
 
-        for (let i = 0; i < files.length; i++) {
-            statusBox.innerText = `🔄 Обробка файлу ${i + 1} з ${files.length}...`;
-            
-            try {
+        try {
+            for (let i = 0; i < files.length; i++) {
+                statusBox.innerText = `🔄 Аналіз фото ${i + 1} з ${files.length}... Не закривайте програму.`;
+                
                 const file = files[i];
-                // Запускаємо розпізнавання (англійської достатньо для цифр і слова "Вага/Bara", це пришвидшить роботу)
                 const { data: { text } } = await Tesseract.recognize(file, 'ukr+eng');
                 
-                // ВАЖЛИВО: Очищаємо рядок з "Материнська ЕН", щоб він не плутав лічильник
                 let cleanText = text.replace(/Материнська[^\n]*/gi, '');
                 
-                // 1. Пошук ваги
                 let weight = 0;
                 const weightMatch = cleanText.match(/(?:Вага|Bara|bara|вага)\s*:\s*([\d.,\s]+)/i);
                 if (weightMatch) {
                     weight = parseFloat(weightMatch[1].replace(/\s/g, '').replace(',', '.'));
                 }
 
-                // 2. Пошук кількості ЕН (шукає вкладку)
                 let enCount = 1;
                 const enMatch = cleanText.match(/(?:ЕН|EH)\s*(\d+)/i);
                 if (enMatch) { 
                     enCount = parseInt(enMatch[1]) || 1; 
                 }
 
-                // 3. Спрощена назва за порядком
                 let title = `Адреса ${currentAddresses.length + 1}`;
 
-                // Додаємо адресу тільки якщо розпізналася хоча б вага
                 if (!isNaN(weight) && weight >= 0) {
                     const cost = calculateAddressCost(weight, enCount);
                     currentAddresses.push({ title, weight, enCount, cost });
                     successCount++;
+                } else {
+                    alert(`На скріншоті ${i + 1} не вдалося знайти слово "Вага".`);
                 }
-
-            } catch (err) { 
-                console.error("Помилка файлу:", err); 
             }
-        }
 
-        statusBox.innerText = `✅ Додано ${successCount} адрес(и) успішно!`;
-        setTimeout(() => { statusBox.style.display = 'none'; }, 4000);
+            statusBox.style.background = "#d4edda";
+            statusBox.style.color = "#155724";
+            statusBox.innerText = `✅ Додано ${successCount} адрес!`;
+            setTimeout(() => { statusBox.style.display = 'none'; }, 4000);
+
+        } catch (err) {
+            // Діагностика 2: Перехоплення будь-яких помилок движка
+            alert(`Помилка під час сканування: ${err.message || err}`);
+            statusBox.innerText = `❌ Помилка сканування.`;
+        }
         
         input.value = '';
         saveCurrentBackup();
@@ -331,13 +214,9 @@
         const weight = parseFloat(wIn.value);
         let enCount = eIn.value.trim() === "" ? 1 : parseInt(eIn.value);
         if (isNaN(weight) || weight < 0) { alert("Вкажіть вагу!"); return; }
-        
-        // Якщо ручне поле порожнє, теж називаємо по порядку
         let title = tIn.value.trim() || `Адреса ${currentAddresses.length + 1}`;
-        
         const cost = calculateAddressCost(weight, enCount);
         currentAddresses.push({ title, weight, enCount, cost });
-        
         tIn.value = ''; wIn.value = ''; eIn.value = '';
         saveCurrentBackup();
         updateLiveUI();
@@ -345,14 +224,9 @@
 
     function deleteAddress(index) {
         currentAddresses.splice(index, 1);
-        
-        // Опціонально: перераховуємо номери адрес після видалення, щоб не було дірок (Адреса 1, Адреса 3)
         currentAddresses.forEach((addr, i) => {
-            if (addr.title.startsWith('Адреса ')) {
-                addr.title = `Адреса ${i + 1}`;
-            }
+            if (addr.title.startsWith('Адреса ')) { addr.title = `Адреса ${i + 1}`; }
         });
-        
         saveCurrentBackup();
         updateLiveUI();
     }
@@ -370,12 +244,54 @@
         document.getElementById('live-weight').innerText = weight.toFixed(2);
         
         const log = document.getElementById('addresses-log');
-        if(currentAddresses.length === 0) {
-            log.innerHTML = '<p style="text-align:center; color:#999; font-size:13px; padding-top:10px;">Список адрес порожній</p>';
-            return;
-        }
+        if(currentAddresses.length === 0) { log.innerHTML = '<p style="text-align:center; color:#999; font-size:13px; padding-top:10px;">Список адрес порожній</p>'; return; }
         
         log.innerHTML = '';
         currentAddresses.forEach((a, i) => {
             log.innerHTML += `<div class="address-item">
-                <div class="address-info"><span class="address-name">${a
+                <div class="address-info"><span class="address-name">${a.title}</span><span class="address-details">${a.weight} кг | ${a.enCount} ЕН</span></div>
+                <div style="display:flex; align-items:center;"><strong style="color:var(--np-red); margin-right:10px;">+${a.cost.toFixed(2)}</strong><span class="delete-btn" onclick="deleteAddress(${i})">×</span></div>
+            </div>`;
+        });
+    }
+
+    function saveShift() {
+        if (currentAddresses.length === 0) { alert("Додайте адреси!"); return; }
+        let earnings = BASE_STRIKE, en = 0, weight = 0;
+        currentAddresses.forEach(a => { earnings += a.cost; en += a.enCount; weight += a.weight; });
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const shift = { id: Date.now(), date: `${day}.${month}`, monthYear: `${now.getMonth() + 1}.${now.getFullYear()}`, count: parseInt(currentAddresses.length) || 0, en: parseInt(en) || 0, weight: parseFloat(weight) || 0, earnings: parseFloat(earnings.toFixed(2)) };
+        let history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
+        history.unshift(shift);
+        localStorage.setItem('shiftHistory', JSON.stringify(history));
+        currentAddresses = []; localStorage.removeItem('currentAddressesBackup');
+        updateLiveUI(); loadHistory(); alert("Дані збережено!");
+    }
+
+    function loadHistory() {
+        const history = JSON.parse(localStorage.getItem('shiftHistory')) || [];
+        const tbody = document.getElementById('history-rows');
+        const now = new Date(), curMY = `${now.getMonth() + 1}.${now.getFullYear()}`;
+        const months = ["Січень", "Лютий", "Березень", "Квітень", "Травень", "Червень", "Липень", "Серпень", "Вересень", "Жовтень", "Листопад", "Грудень"];
+        document.getElementById('stats-month-title').innerText = `ПІДСУМОК: ${months[now.getMonth()].toUpperCase()} ${now.getFullYear()}`;
+        let mE = 0, mW = 0, mEn = 0, mAdd = 0;
+        tbody.innerHTML = '';
+        history.forEach(s => {
+            const shiftCount = parseInt(s.count) || parseInt(s.addressesCount) || 0, shiftEn = parseInt(s.en) || parseInt(s.enCount) || 0, shiftWeight = parseFloat(s.weight) || 0, shiftEarnings = parseFloat(s.earnings) || 0;
+            if (s.monthYear === curMY) { mE += shiftEarnings; mW += shiftWeight; mEn += shiftEn; mAdd += shiftCount; }
+            tbody.innerHTML += `<tr><td><b>${s.date || 'Зміна'}</b></td><td>${shiftCount}/${shiftEn}</td><td style="color:#666">${shiftWeight.toFixed(1)} кг</td><td><b>${shiftEarnings.toFixed(0)}</b></td><td><button class="btn-danger" onclick="deleteShift(${s.id})">🗑️</button></td></tr>`;
+        });
+        document.getElementById('month-earnings').innerText = `${mE.toFixed(2)} грн`; document.getElementById('month-weight').innerText = `${mW.toFixed(2)} кг`; document.getElementById('month-en').innerText = mEn; document.getElementById('month-addresses').innerText = mAdd;
+    }
+
+    function deleteShift(id) { if (confirm("Видалити цей день?")) { let history = JSON.parse(localStorage.getItem('shiftHistory')) || []; localStorage.setItem('shiftHistory', JSON.stringify(history.filter(s => s.id !== id))); loadHistory(); } }
+    function clearAllHistory() { if (confirm("Видалити ВСЮ історію?")) { localStorage.removeItem('shiftHistory'); loadHistory(); } }
+    function exportBackup() { const h = localStorage.getItem('shiftHistory'); if (!h || h === "[]") return; const blob = new Blob([h], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `NP_Backup_${new Date().toLocaleDateString()}.json`; a.click(); }
+    function importBackup(input) { const file = input.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { const data = JSON.parse(e.target.result); if (Array.isArray(data)) { localStorage.setItem('shiftHistory', JSON.stringify(data)); loadHistory(); alert("Відновлено!"); } }; reader.readAsText(file); }
+    window.onload = function() { loadHistory(); updateLiveUI(); };
+</script>
+
+</body>
+</html>
