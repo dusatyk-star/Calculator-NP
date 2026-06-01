@@ -11,97 +11,79 @@
         body { font-family: sans-serif; background-color: var(--np-grey); margin: 0; padding: 15px; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 8px solid var(--np-red); }
         h1 { text-align: center; color: var(--np-red); text-transform: uppercase; font-size: 20px; margin-bottom: 20px; }
-        h2 { font-size: 14px; border-bottom: 2px solid var(--np-grey); padding-bottom: 5px; margin-top: 20px; text-transform: uppercase; }
         button { width: 100%; padding: 15px; background-color: var(--np-red); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
         .btn-scan { background-color: #2e7d32; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .stats-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
-        .stats-table th, .stats-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-        .stats-table th { background: var(--np-grey); }
-        .address-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .debug-box { text-align: center; font-size: 12px; margin-bottom: 20px; padding: 10px; background: #fff3cd; border-radius: 6px; }
+        #ocr-status { display: none; padding: 10px; background: #d4edda; text-align: center; margin-bottom: 15px; border-radius: 6px; }
+        .address-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>Нова Пошта: Експедитор</h1>
-
     <button class="btn-scan" onclick="document.getElementById('scrFiles').click()">📸 АВТОВВЕДЕННЯ ЗІ СКРІНШОТІВ</button>
     <input type="file" id="scrFiles" accept="image/*" multiple style="display:none" onchange="scanScreenshots(this)">
-    <div id="ocr-status" style="display:none; padding:10px; background:#d4edda; text-align:center; margin-bottom:15px;">⏳ Обробка...</div>
-
-    <h2>📋 СТАТИСТИКА ЗА РІК (ПОМІСЯЧНО)</h2>
-    <table class="stats-table">
-        <thead><tr><th>Місяць</th><th>Адр</th><th>ЕН</th><th>кг</th><th>грн</th></tr></thead>
-        <tbody id="stats-body"></tbody>
-    </table>
-
-    <h2>📍 АДРЕСИ ЗА ЗМІНУ</h2>
-    <div id="addresses-log"></div>
     
+    <label class="debug-box"><input type="checkbox" id="debug-mode"> 🛠 Режим діагностики</label>
+    <div id="ocr-status">Очікування...</div>
+
     <input type="text" id="address-title" placeholder="Адреса (наприклад, Адреса 1)">
     <input type="number" id="weight" step="0.01" placeholder="Вага (кг)">
     <input type="number" id="en-count" placeholder="Кількість ЕН">
     <button onclick="addAddress()">ДОДАТИ ВРУЧНУ</button>
+    
+    <div id="addresses-log"></div>
     <button style="background-color: var(--np-dark);" onclick="saveShift()">ЗБЕРЕГТИ ЗМІНУ</button>
 </div>
 
 <script>
-    let currentAddresses = JSON.parse(localStorage.getItem('currentAddresses')) || [];
-    let yearStats = JSON.parse(localStorage.getItem('yearStats')) || {};
-    const BASE_STRIKE = 245; const TARIF_EN = 0.24;
-
-    function calcCost(w, e) {
-        let tAddr = w > 200 ? 16.5 : (w > 30 ? 16.5 : (w > 1 ? 7.5 : 5.5));
-        let tW = w > 200 ? 0.06 : (w > 30 ? 0.11 : 0.03);
-        return tAddr + (w * tW) + (e * TARIF_EN);
-    }
-
+    let currentAddresses = [];
     async function scanScreenshots(input) {
+        const files = input.files;
+        if (files.length === 0) return;
         const statusBox = document.getElementById('ocr-status');
         statusBox.style.display = 'block';
-        for (let file of input.files) {
-            const url = URL.createObjectURL(file);
-            const { data: { text } } = await Tesseract.recognize(url, 'ukr+eng');
-            URL.revokeObjectURL(url);
-            let w = parseFloat((text.match(/(?:Вага|Bara|вага)[^\d]*([\d.,]+)/i) || [0,0])[1].replace(',', '.'));
-            let e = parseInt((text.match(/(?:ЕН|EH)[^\d]{0,5}(\d{1,3})/i) || [0,1])[1]);
-            if (w > 0) currentAddresses.push({ title: `Адреса ${currentAddresses.length + 1}`, weight: w, enCount: e, cost: calcCost(w, e) });
+        statusBox.innerText = "⏳ Обробка...";
+
+        for (let file of files) {
+            const imgUrl = URL.createObjectURL(file);
+            const { data: { text } } = await Tesseract.recognize(imgUrl, 'ukr+eng');
+            URL.revokeObjectURL(imgUrl);
+
+            if (document.getElementById('debug-mode').checked) alert(text);
+
+            let cleanText = text.replace(/Материнська[^\n]*/gi, '');
+            let weight = 0, enCount = 1;
+
+            const wMatch = cleanText.match(/(?:Вага|Bara|вага)[^\d]*([\d.,]+)/i);
+            if (wMatch) weight = parseFloat(wMatch[1].replace(',', '.'));
+
+            const enMatch = cleanText.match(/(?:ЕН|EH|Е\s*Н|E\s*H)[^\d]{0,5}(\d{1,3})/i);
+            if (enMatch) enCount = parseInt(enMatch[1]);
+
+            if (weight > 0) {
+                currentAddresses.push({ title: `Адреса ${currentAddresses.length + 1}`, weight, enCount });
+            }
         }
-        statusBox.style.display = 'none';
-        updateUI();
+        statusBox.innerText = "✅ Готово!";
+        renderList();
     }
 
     function addAddress() {
         const t = document.getElementById('address-title').value || `Адреса ${currentAddresses.length + 1}`;
         const w = parseFloat(document.getElementById('weight').value);
         const e = parseInt(document.getElementById('en-count').value) || 1;
-        if (!isNaN(w)) { currentAddresses.push({ title: t, weight: w, enCount: e, cost: calcCost(w, e) }); updateUI(); }
+        if (!isNaN(w)) { currentAddresses.push({ title: t, weight: w, enCount: e }); renderList(); }
     }
 
-    function saveShift() {
-        const now = new Date();
-        const mKey = now.toLocaleString('uk-UA', { month: 'long', year: 'numeric' });
-        if (!yearStats[mKey]) yearStats[mKey] = { w:0, e:0, a:0, money:BASE_STRIKE };
-        currentAddresses.forEach(s => {
-            yearStats[mKey].w += s.weight; yearStats[mKey].e += s.enCount;
-            yearStats[mKey].a++; yearStats[mKey].money += s.cost;
-        });
-        localStorage.setItem('yearStats', JSON.stringify(yearStats));
-        currentAddresses = []; updateUI(); alert("Зміна збережена!");
+    function renderList() {
+        const log = document.getElementById('addresses-log');
+        log.innerHTML = currentAddresses.map((a, i) => `<div class="address-item">${a.title}: ${a.weight} кг | ${a.enCount} ЕН</div>`).join('');
     }
 
-    function updateUI() {
-        localStorage.setItem('currentAddresses', JSON.stringify(currentAddresses));
-        document.getElementById('addresses-log').innerHTML = currentAddresses.map(a => 
-            `<div class="address-item">${a.title}: ${a.weight} кг | ${a.enCount} ЕН</div>`).join('');
-        
-        const tbody = document.getElementById('stats-body');
-        tbody.innerHTML = Object.entries(yearStats).map(([m, r]) => 
-            `<tr><td>${m}</td><td>${r.a}</td><td>${r.e}</td><td>${r.w.toFixed(0)}</td><td>${r.money.toFixed(0)}</td></tr>`).join('');
-    }
-
-    window.onload = updateUI;
+    function saveShift() { alert("Зміна збережена!"); currentAddresses = []; renderList(); }
 </script>
 </body>
 </html>
