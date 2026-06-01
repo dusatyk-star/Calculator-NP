@@ -3,109 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NP Expeditor Calc Pro</title>
+    <title>NP Expeditor Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
         :root { --np-red: #e30613; --np-dark: #231f20; --np-grey: #f2f2f2; }
         body { font-family: sans-serif; background-color: var(--np-grey); margin: 0; padding: 15px; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 8px solid var(--np-red); }
-        h1 { text-align: center; color: var(--np-red); font-size: 20px; }
-        h2 { font-size: 16px; border-bottom: 2px solid var(--np-grey); padding-bottom: 8px; margin-top: 20px; }
+        h1 { text-align: center; color: var(--np-red); font-size: 18px; margin-bottom: 20px; }
+        h2 { font-size: 14px; border-bottom: 2px solid var(--np-grey); padding-bottom: 5px; margin-top: 20px; text-transform: uppercase; }
         button { width: 100%; padding: 15px; background-color: var(--np-red); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
         .btn-scan { background-color: #2e7d32; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .stats-box { background: #fff; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px solid #ddd; }
-        .history-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .stats-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+        .stats-table th, .stats-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        .stats-table th { background: var(--np-grey); }
+        .address-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>Нова Пошта: Експедитор</h1>
+
     <button class="btn-scan" onclick="document.getElementById('scrFiles').click()">📸 АВТОВВЕДЕННЯ СКРІНШОТІВ</button>
     <input type="file" id="scrFiles" accept="image/*" multiple style="display:none" onchange="scanScreenshots(this)">
-    <div id="ocr-status" style="display:none; text-align:center; padding:10px; background:#fff3cd;">⏳ Обробка...</div>
 
+    <h2>📋 СТАТИСТИКА ЗА РІК (ПОМІСЯЧНО)</h2>
+    <table class="stats-table" id="stats-table">
+        <thead>
+            <tr><th>Місяць</th><th>Адр</th><th>ЕН</th><th>кг</th><th>грн</th></tr>
+        </thead>
+        <tbody id="stats-body"></tbody>
+    </table>
+
+    <h2>📍 АДРЕСИ ЗА ЗМІНУ</h2>
+    <div id="addresses-log"></div>
+    
     <input type="number" id="weight" placeholder="Вага (кг)">
     <input type="number" id="en-count" placeholder="Кількість ЕН">
-    <button onclick="addAddress()">ДОДАТИ АДРЕСУ</button>
-
-    <h2>📋 Статистика місяців:</h2>
-    <div id="stats-log"></div>
-    <button style="background-color: var(--np-dark);" onclick="clearHistory()">ОЧИСТИТИ ІСТОРІЮ</button>
+    <button onclick="addManualAddress()">ДОДАТИ АДРЕСУ</button>
+    <button style="background-color: var(--np-dark);" onclick="saveShift()">ЗБЕРЕГТИ ЗМІНУ</button>
 </div>
 
 <script>
-    let shiftData = JSON.parse(localStorage.getItem('shiftData')) || [];
-    const BASE_STRIKE = 245; 
-    const TARIF_EN = 0.24;
+    let currentShift = JSON.parse(localStorage.getItem('currentShift')) || [];
+    let yearStats = JSON.parse(localStorage.getItem('yearStats')) || {};
+    const BASE_STRIKE = 245; const TARIF_EN = 0.24;
 
-    function calculateCost(w, e) {
+    function calcCost(w, e) {
         let tAddr = w > 200 ? 16.5 : (w > 30 ? 16.5 : (w > 1 ? 7.5 : 5.5));
         let tW = w > 200 ? 0.06 : (w > 30 ? 0.11 : 0.03);
         return tAddr + (w * tW) + (e * TARIF_EN);
     }
 
     async function scanScreenshots(input) {
-        const files = input.files;
-        let totalW = 0, totalE = 0, totalCost = 0, totalA = 0;
-        
-        for (let file of files) {
-            const imgUrl = URL.createObjectURL(file);
-            const { data: { text } } = await Tesseract.recognize(imgUrl, 'ukr+eng');
-            URL.revokeObjectURL(imgUrl);
+        for (let file of input.files) {
+            const url = URL.createObjectURL(file);
+            const { data: { text } } = await Tesseract.recognize(url, 'ukr+eng');
+            URL.revokeObjectURL(url);
             
-            let wMatch = text.match(/(?:Вага|Bara|вага)[^\d]*([\d.,]+)/i);
-            let w = wMatch ? parseFloat(wMatch[1].replace(',', '.')) : 0;
-            let eMatch = text.match(/(?:ЕН|EH|Е\s*Н|E\s*H)[^\d]{0,5}(\d{1,3})/i);
-            let e = eMatch ? parseInt(eMatch[1]) : 1;
+            let clean = text.replace(/Материнська[^\n]*/gi, '');
+            let w = parseFloat((clean.match(/(?:Вага|Bara|вага)[^\d]*([\d.,]+)/i) || [0,0])[1].replace(',', '.'));
+            let eMatch = clean.match(/(?:ЕН|EH|Е\s*Н|E\s*H)[^\d]{0,5}(\d{1,3})/i);
+            let e = eMatch ? parseInt(eMatch[1].replace(/[єeе]/g, '6').replace(/[oо]/g, '0')) : 1;
             
-            if (w > 0) {
-                totalW += w; totalE += e; totalA++;
-                totalCost += calculateCost(w, e);
-            }
+            if (w > 0) currentShift.push({ w, e, cost: calcCost(w, e) });
         }
-        
-        saveToStats(totalA, totalE, totalW, totalCost + BASE_STRIKE);
-        alert("Дані додано до статистики!");
+        updateUI();
     }
 
-    function addAddress() {
+    function addManualAddress() {
         const w = parseFloat(document.getElementById('weight').value);
         const e = parseInt(document.getElementById('en-count').value) || 1;
-        if (!isNaN(w)) {
-            saveToStats(1, e, w, calculateCost(w, e));
-            alert("Адресу додано!");
-        }
+        if (!isNaN(w)) currentShift.push({ w, e, cost: calcCost(w, e) });
+        updateUI();
     }
 
-    function saveToStats(a, e, w, money) {
-        const date = new Date();
-        const monthYear = `${date.getMonth()+1}.${date.getFullYear()}`;
-        let record = shiftData.find(r => r.month === monthYear);
+    function saveShift() {
+        const now = new Date();
+        const monthKey = now.toLocaleString('uk-UA', { month: 'long', year: 'numeric' });
+        if (!yearStats[monthKey]) yearStats[monthKey] = { w:0, e:0, a:0, money:BASE_STRIKE };
         
-        if (record) {
-            record.addresses += a; record.en += e; record.weight += w; record.earnings += money;
-        } else {
-            shiftData.push({ month: monthYear, addresses: a, en: e, weight: w, earnings: money });
-        }
-        localStorage.setItem('shiftData', JSON.stringify(shiftData));
-        renderStats();
+        currentShift.forEach(s => {
+            yearStats[monthKey].w += s.w; yearStats[monthKey].e += s.e; 
+            yearStats[monthKey].a++; yearStats[monthKey].money += s.cost;
+        });
+        
+        localStorage.setItem('yearStats', JSON.stringify(yearStats));
+        currentShift = []; updateUI(); alert("Зміну збережено!");
     }
 
-    function renderStats() {
-        const log = document.getElementById('stats-log');
-        log.innerHTML = shiftData.map(r => `
-            <div class="history-item">
-                <b>Місяць: ${r.month}</b><br>
-                Адреси: ${r.addresses} | ЕН: ${r.en} | Вага: ${r.weight.toFixed(1)} кг<br>
-                Заробіток: ${r.earnings.toFixed(2)} грн
-            </div>
-        `).join('');
+    function updateUI() {
+        localStorage.setItem('currentShift', JSON.stringify(currentShift));
+        document.getElementById('addresses-log').innerHTML = currentShift.map((s, i) => 
+            `<div class="address-item">Адреса ${i+1}: ${s.w} кг | ${s.e} ЕН</div>`).join('');
+        
+        const tbody = document.getElementById('stats-body');
+        tbody.innerHTML = Object.entries(yearStats).map(([m, r]) => 
+            `<tr><td>${m}</td><td>${r.a}</td><td>${r.e}</td><td>${r.w.toFixed(0)}</td><td>${r.money.toFixed(0)}</td></tr>`).join('');
     }
 
-    function clearHistory() { if(confirm("Видалити статистику?")) { localStorage.removeItem('shiftData'); shiftData = []; renderStats(); } }
-    window.onload = renderStats;
+    window.onload = updateUI;
 </script>
 </body>
 </html>
