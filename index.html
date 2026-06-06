@@ -34,7 +34,7 @@
     <div class="month-box">
         <p style="margin: 0; font-size: 12px; color: #555; text-transform: uppercase; font-weight: bold;">📊 Статистика за поточний місяць</p>
         <h3><span id="month-total-money">0.00</span> грн</h3>
-        <p style="margin: 0; font-size: 13px; color: #333;">Всього адрес: <b id="month-total-addr">0</b> | Всього ЕН: <b id="month-total-en">0</b></p>
+        <p style="margin: 0; font-size: 13px; color: #333;">Всього адрес: <b id="month-total-addr">0</b> | Вага: <b id="month-total-weight">0</b> кг | Всього ЕН: <b id="month-total-en">0</b></p>
     </div>
 
     <button class="btn-scan" onclick="document.getElementById('scrFiles').click()">📸 АВТОВВЕДЕННЯ ЗІ СКРІНШОТІВ</button>
@@ -55,7 +55,7 @@
     </div>
 
     <div class="total-box">
-        <p style="margin: 0; font-size: 13px; color: #333;">За зміну: <b id="shift-addr-count">0</b> адр | <b id="shift-en-count">0</b> ЕН</p>
+        <p style="margin: 0; font-size: 13px; color: #333;">За зміну: <b id="shift-addr-count">0</b> адр | <b id="shift-weight-count">0</b> кг | <b id="shift-en-count">0</b> ЕН</p>
         <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Заробіток (зі ставкою 245 грн):</p>
         <h3><span id="shift-total">245.00</span> грн</h3>
     </div>
@@ -69,7 +69,6 @@
 </div>
 
 <script>
-    // Тепер і поточні адреси, і історія завантажуються з пам'яті телефону
     let currentAddresses = JSON.parse(localStorage.getItem('npCurrentAddresses')) || [];
     let shiftHistory = JSON.parse(localStorage.getItem('npShiftHistory')) || [];
     
@@ -85,7 +84,6 @@
         return tAddr + (weight * tW) + (enCount * TARIF_EN);
     }
 
-    // Зберігаємо поточну незавершену зміну в пам'ять
     function saveCurrentToStorage() {
         localStorage.setItem('npCurrentAddresses', JSON.stringify(currentAddresses));
     }
@@ -126,25 +124,36 @@
         }
         statusBox.innerText = "✅ Готово!";
         setTimeout(() => statusBox.style.display = 'none', 3000);
-        saveCurrentToStorage(); // Автозбереження
+        saveCurrentToStorage();
         renderCurrentShift();
     }
 
     function addAddress() {
-        const t = document.getElementById('address-title').value || `Адреса ${currentAddresses.length + 1}`;
-        const w = parseFloat(document.getElementById('weight').value);
-        const e = parseInt(document.getElementById('en-count').value) || 1;
+        const titleInput = document.getElementById('address-title');
+        const weightInput = document.getElementById('weight');
+        const enCountInput = document.getElementById('en-count');
+
+        const t = titleInput.value || `Адреса ${currentAddresses.length + 1}`;
+        const w = parseFloat(weightInput.value);
+        const e = parseInt(enCountInput.value) || 1;
+        
         if (!isNaN(w)) { 
             const cost = calculateCost(w, e);
             currentAddresses.push({ id: Date.now(), title: t, weight: w, enCount: e, cost }); 
-            saveCurrentToStorage(); // Автозбереження
+            saveCurrentToStorage();
             renderCurrentShift(); 
+
+            // ОЧИЩЕННЯ ПОЛІВ ПІСЛЯ ДОДАВАННЯ
+            titleInput.value = '';
+            weightInput.value = '';
+            enCountInput.value = '';
+            titleInput.focus(); // Одразу повертає курсор у поле назви адреси (опціонально)
         }
     }
 
     function deleteAddress(id) {
         currentAddresses = currentAddresses.filter(a => a.id !== id);
-        saveCurrentToStorage(); // Автозбереження
+        saveCurrentToStorage();
         renderCurrentShift();
     }
 
@@ -152,11 +161,13 @@
         const log = document.getElementById('addresses-log');
         let totalMoney = BASE_STRIKE;
         let totalEn = 0;
+        let totalWeight = 0;
         
         if (currentAddresses.length === 0) {
             log.innerHTML = '<p style="text-align:center; color:#999; font-size:13px;">Немає доданих адрес</p>';
             document.getElementById('shift-total').innerText = BASE_STRIKE.toFixed(2);
             document.getElementById('shift-addr-count').innerText = 0;
+            document.getElementById('shift-weight-count').innerText = "0";
             document.getElementById('shift-en-count').innerText = 0;
             return;
         }
@@ -164,6 +175,7 @@
         log.innerHTML = currentAddresses.map((a) => {
             totalMoney += a.cost;
             totalEn += a.enCount;
+            totalWeight += a.weight;
             return `<div class="address-item">
                         <div style="flex-grow: 1;">
                             <b>${a.title}</b><br>
@@ -175,6 +187,7 @@
         
         document.getElementById('shift-total').innerText = totalMoney.toFixed(2);
         document.getElementById('shift-addr-count').innerText = currentAddresses.length;
+        document.getElementById('shift-weight-count').innerText = totalWeight.toFixed(2);
         document.getElementById('shift-en-count').innerText = totalEn;
     }
 
@@ -186,9 +199,12 @@
 
         let totalMoney = BASE_STRIKE;
         let totalEn = 0;
+        let totalWeight = 0;
+
         currentAddresses.forEach(a => {
             totalMoney += a.cost;
             totalEn += a.enCount;
+            totalWeight += a.weight;
         });
 
         const now = new Date();
@@ -201,6 +217,7 @@
             monthKey: monthKey,
             addressCount: currentAddresses.length,
             enCount: totalEn,
+            weight: totalWeight,
             total: totalMoney
         };
 
@@ -209,7 +226,6 @@
         
         alert(`Зміну збережено!\nЗаробіток: ${totalMoney.toFixed(2)} грн`); 
         
-        // Очищаємо поточну зміну і видаляємо її з пам'яті
         currentAddresses = []; 
         localStorage.removeItem('npCurrentAddresses');
         
@@ -240,10 +256,11 @@
 
         log.innerHTML = shiftHistory.map(s => {
             let enText = s.enCount ? ` | ЕН: ${s.enCount}` : '';
+            let wText = s.weight ? ` | ${s.weight.toFixed(1)} кг` : '';
             return `<div class="history-item">
                         <div>
                             <b>🗓 ${s.date}</b><br>
-                            <span style="color:#666; font-size: 12px;">Адрес: ${s.addressCount}${enText} | <strong style="color:var(--np-red)">${s.total.toFixed(2)} ₴</strong></span>
+                            <span style="color:#666; font-size: 12px;">Адрес: ${s.addressCount}${wText}${enText} | <strong style="color:var(--np-red)">${s.total.toFixed(2)} ₴</strong></span>
                         </div>
                         <button class="del-btn" onclick="deleteShift(${s.id})">Видалити</button>
                     </div>`;
@@ -254,18 +271,20 @@
         const now = new Date();
         const currentMonthKey = `${now.getMonth()+1}.${now.getFullYear()}`;
         
-        let mMoney = 0, mAddr = 0, mEn = 0;
+        let mMoney = 0, mAddr = 0, mEn = 0, mWeight = 0;
 
         shiftHistory.forEach(s => {
             if (s.monthKey === currentMonthKey || (s.date && s.date.includes(`.${now.getMonth()+1}.${now.getFullYear()}`))) {
                 mMoney += s.total;
                 mAddr += s.addressCount;
                 mEn += s.enCount || 0;
+                mWeight += s.weight || 0;
             }
         });
 
         document.getElementById('month-total-money').innerText = mMoney.toFixed(2);
         document.getElementById('month-total-addr').innerText = mAddr;
+        document.getElementById('month-total-weight').innerText = mWeight.toFixed(1);
         document.getElementById('month-total-en').innerText = mEn;
     }
 
