@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NP Expeditor Calc Pro</title>
-    <link rel="icon" type="image/png" href="https://vsetut.pl/uploads/news/images/840_460/1449673418-novaposhta.png">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
         :root { --np-red: #e30613; --np-dark: #231f20; --np-grey: #f2f2f2; }
@@ -49,23 +48,26 @@
 
         for (let file of files) {
             const imgUrl = URL.createObjectURL(file);
-            const { data: { text } } = await Tesseract.recognize(imgUrl, 'ukr+eng');
-            URL.revokeObjectURL(imgUrl);
+            try {
+                const { data: { text } } = await Tesseract.recognize(imgUrl, 'ukr+eng');
+                if (document.getElementById('debug-mode').checked) alert(text);
 
-            if (document.getElementById('debug-mode').checked) alert(text);
+                let cleanText = text.replace(/Материнська[^\n]*/gi, '');
+                let weight = 0, enCount = 1;
 
-            let cleanText = text.replace(/Материнська[^\n]*/gi, '');
-            let weight = 0, enCount = 1;
+                const wMatch = cleanText.match(/(?:Вага|Bara|вага)[^\d]*([\d.,]+)/i);
+                if (wMatch) weight = parseFloat(wMatch[1].replace(',', '.'));
 
-            const wMatch = cleanText.match(/(?:Вага|Bara|вага)[^\d]*([\d.,]+)/i);
-            if (wMatch) weight = parseFloat(wMatch[1].replace(',', '.'));
+                const enMatch = cleanText.match(/(?:ЕН|EH|Е\s*Н|E\s*H)[^\d]{0,5}(\d{1,3})/i);
+                if (enMatch) enCount = parseInt(enMatch[1]);
 
-            const enMatch = cleanText.match(/(?:ЕН|EH|Е\s*Н|E\s*H)[^\d]{0,5}(\d{1,3})/i);
-            if (enMatch) enCount = parseInt(enMatch[1]);
-
-            if (weight > 0) {
-                currentAddresses.push({ title: `Адреса ${currentAddresses.length + 1}`, weight, enCount });
+                if (weight > 0) {
+                    currentAddresses.push({ title: `Адреса ${currentAddresses.length + 1}`, weight, enCount });
+                }
+            } catch (err) {
+                console.error("Помилка:", err);
             }
+            URL.revokeObjectURL(imgUrl);
         }
         statusBox.innerText = "✅ Готово!";
         renderList();
