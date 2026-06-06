@@ -10,7 +10,7 @@
         :root { --np-red: #e30613; --np-dark: #231f20; --np-grey: #f2f2f2; }
         body { font-family: sans-serif; background-color: var(--np-grey); margin: 0; padding: 15px; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 8px solid var(--np-red); }
-        h1 { text-align: center; color: var(--np-red); text-transform: uppercase; font-size: 20px; margin-bottom: 20px; }
+        h1 { text-align: center; color: var(--np-red); text-transform: uppercase; font-size: 20px; margin-bottom: 15px; }
         h2 { font-size: 16px; border-bottom: 2px solid var(--np-grey); padding-bottom: 5px; margin-top: 25px; text-transform: uppercase; }
         button { width: 100%; padding: 15px; background-color: var(--np-red); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
         .btn-scan { background-color: #2e7d32; }
@@ -20,7 +20,9 @@
         .address-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px solid #eee; font-size: 14px; background: #fdfdfd; }
         .del-btn { color: white; background: red; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-weight: bold; font-size: 12px; width: auto; margin: 0; }
         .total-box { text-align: center; margin-top: 15px; padding: 15px; background: #fffafa; border: 1px solid #ffcdd2; border-radius: 8px; }
-        .total-box h3 { margin: 0; color: var(--np-red); font-size: 22px; }
+        .total-box h3 { margin: 5px 0; color: var(--np-red); font-size: 22px; }
+        .month-box { text-align: center; margin-bottom: 20px; padding: 15px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; }
+        .month-box h3 { margin: 5px 0; color: #1565c0; font-size: 20px; }
         .history-item { background: #f9f9f9; border: 1px solid #ddd; padding: 12px; margin-bottom: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
     </style>
 </head>
@@ -29,6 +31,12 @@
 <div class="container">
     <h1>Нова Пошта: Експедитор</h1>
     
+    <div class="month-box">
+        <p style="margin: 0; font-size: 12px; color: #555; text-transform: uppercase; font-weight: bold;">📊 Статистика за поточний місяць</p>
+        <h3><span id="month-total-money">0.00</span> грн</h3>
+        <p style="margin: 0; font-size: 13px; color: #333;">Всього адрес: <b id="month-total-addr">0</b> | Всього ЕН: <b id="month-total-en">0</b></p>
+    </div>
+
     <button class="btn-scan" onclick="document.getElementById('scrFiles').click()">📸 АВТОВВЕДЕННЯ ЗІ СКРІНШОТІВ</button>
     <input type="file" id="scrFiles" accept="image/*" multiple style="display:none" onchange="scanScreenshots(this)">
     
@@ -47,7 +55,8 @@
     </div>
 
     <div class="total-box">
-        <p style="margin: 0 0 5px 0; font-size: 12px; color: #666;">Підсумок за зміну (зі ставкою 245 грн):</p>
+        <p style="margin: 0; font-size: 13px; color: #333;">За зміну: <b id="shift-addr-count">0</b> адр | <b id="shift-en-count">0</b> ЕН</p>
+        <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Заробіток (зі ставкою 245 грн):</p>
         <h3><span id="shift-total">245.00</span> грн</h3>
     </div>
 
@@ -60,14 +69,13 @@
 </div>
 
 <script>
-    let currentAddresses = [];
-    // Завантажуємо історію змін з пам'яті телефону
+    // Тепер і поточні адреси, і історія завантажуються з пам'яті телефону
+    let currentAddresses = JSON.parse(localStorage.getItem('npCurrentAddresses')) || [];
     let shiftHistory = JSON.parse(localStorage.getItem('npShiftHistory')) || [];
     
     const BASE_STRIKE = 245; 
     const TARIF_EN = 0.24;
 
-    // Твоя сітка тарифікації
     function calculateCost(weight, enCount) {
         let tAddr = 0, tW = 0;
         if (weight >= 0 && weight <= 1) { tAddr = 5.5;  tW = 0.03; }
@@ -77,7 +85,11 @@
         return tAddr + (weight * tW) + (enCount * TARIF_EN);
     }
 
-    // Сканер скріншотів
+    // Зберігаємо поточну незавершену зміну в пам'ять
+    function saveCurrentToStorage() {
+        localStorage.setItem('npCurrentAddresses', JSON.stringify(currentAddresses));
+    }
+
     async function scanScreenshots(input) {
         const files = input.files;
         if (files.length === 0) return;
@@ -98,7 +110,6 @@
             const wMatch = cleanText.match(/(?:Вага|Bara|вага)[^\d]*([\d.,]+)/i);
             if (wMatch) weight = parseFloat(wMatch[1].replace(',', '.'));
 
-            // Виправляємо друкарки (є -> 6, о -> 0)
             let eMatch = cleanText.match(/(?:ЕН|EH|Е\s*Н|E\s*H)[^\d]{0,5}(\d{1,3})/i);
             if (eMatch) enCount = parseInt(eMatch[1].replace(/[єeе]/g, '6').replace(/[oо]/g, '0'));
 
@@ -115,10 +126,10 @@
         }
         statusBox.innerText = "✅ Готово!";
         setTimeout(() => statusBox.style.display = 'none', 3000);
+        saveCurrentToStorage(); // Автозбереження
         renderCurrentShift();
     }
 
-    // Ручне додавання
     function addAddress() {
         const t = document.getElementById('address-title').value || `Адреса ${currentAddresses.length + 1}`;
         const w = parseFloat(document.getElementById('weight').value);
@@ -126,29 +137,33 @@
         if (!isNaN(w)) { 
             const cost = calculateCost(w, e);
             currentAddresses.push({ id: Date.now(), title: t, weight: w, enCount: e, cost }); 
+            saveCurrentToStorage(); // Автозбереження
             renderCurrentShift(); 
         }
     }
 
-    // Видалення однієї адреси зі списку
     function deleteAddress(id) {
         currentAddresses = currentAddresses.filter(a => a.id !== id);
+        saveCurrentToStorage(); // Автозбереження
         renderCurrentShift();
     }
 
-    // Відображення поточної зміни
     function renderCurrentShift() {
         const log = document.getElementById('addresses-log');
         let totalMoney = BASE_STRIKE;
+        let totalEn = 0;
         
         if (currentAddresses.length === 0) {
             log.innerHTML = '<p style="text-align:center; color:#999; font-size:13px;">Немає доданих адрес</p>';
             document.getElementById('shift-total').innerText = BASE_STRIKE.toFixed(2);
+            document.getElementById('shift-addr-count').innerText = 0;
+            document.getElementById('shift-en-count').innerText = 0;
             return;
         }
 
         log.innerHTML = currentAddresses.map((a) => {
             totalMoney += a.cost;
+            totalEn += a.enCount;
             return `<div class="address-item">
                         <div style="flex-grow: 1;">
                             <b>${a.title}</b><br>
@@ -159,9 +174,10 @@
         }).join('');
         
         document.getElementById('shift-total').innerText = totalMoney.toFixed(2);
+        document.getElementById('shift-addr-count').innerText = currentAddresses.length;
+        document.getElementById('shift-en-count').innerText = totalEn;
     }
 
-    // Збереження зміни в історію
     function saveShift() { 
         if (currentAddresses.length === 0) {
             alert("Спочатку додайте адреси!");
@@ -169,41 +185,52 @@
         }
 
         let totalMoney = BASE_STRIKE;
-        currentAddresses.forEach(a => totalMoney += a.cost);
+        let totalEn = 0;
+        currentAddresses.forEach(a => {
+            totalMoney += a.cost;
+            totalEn += a.enCount;
+        });
 
         const now = new Date();
         const dateString = `${now.getDate()}.${now.getMonth()+1}.${now.getFullYear()} ${now.getHours()}:${now.getMinutes()}`;
+        const monthKey = `${now.getMonth()+1}.${now.getFullYear()}`;
 
         const newShift = {
             id: Date.now(),
             date: dateString,
+            monthKey: monthKey,
             addressCount: currentAddresses.length,
+            enCount: totalEn,
             total: totalMoney
         };
 
-        shiftHistory.unshift(newShift); // Додаємо на початок списку
+        shiftHistory.unshift(newShift); 
         localStorage.setItem('npShiftHistory', JSON.stringify(shiftHistory));
         
         alert(`Зміну збережено!\nЗаробіток: ${totalMoney.toFixed(2)} грн`); 
+        
+        // Очищаємо поточну зміну і видаляємо її з пам'яті
         currentAddresses = []; 
+        localStorage.removeItem('npCurrentAddresses');
+        
         document.getElementById('address-title').value = '';
         document.getElementById('weight').value = '';
         document.getElementById('en-count').value = '';
         
         renderCurrentShift(); 
         renderHistory();
+        renderMonthlyStats();
     }
 
-    // Видалення збереженої зміни
     function deleteShift(id) {
         if (confirm("Точно видалити цю зміну з історії?")) {
             shiftHistory = shiftHistory.filter(s => s.id !== id);
             localStorage.setItem('npShiftHistory', JSON.stringify(shiftHistory));
             renderHistory();
+            renderMonthlyStats();
         }
     }
 
-    // Відображення історії змін
     function renderHistory() {
         const log = document.getElementById('history-log');
         if (shiftHistory.length === 0) {
@@ -212,20 +239,40 @@
         }
 
         log.innerHTML = shiftHistory.map(s => {
+            let enText = s.enCount ? ` | ЕН: ${s.enCount}` : '';
             return `<div class="history-item">
                         <div>
                             <b>🗓 ${s.date}</b><br>
-                            <span style="color:#666; font-size: 12px;">Адрес: ${s.addressCount} | Заробіток: <strong style="color:var(--np-red)">${s.total.toFixed(2)} ₴</strong></span>
+                            <span style="color:#666; font-size: 12px;">Адрес: ${s.addressCount}${enText} | <strong style="color:var(--np-red)">${s.total.toFixed(2)} ₴</strong></span>
                         </div>
                         <button class="del-btn" onclick="deleteShift(${s.id})">Видалити</button>
                     </div>`;
         }).join('');
     }
 
-    // Завантажуємо списки при відкритті сайту
+    function renderMonthlyStats() {
+        const now = new Date();
+        const currentMonthKey = `${now.getMonth()+1}.${now.getFullYear()}`;
+        
+        let mMoney = 0, mAddr = 0, mEn = 0;
+
+        shiftHistory.forEach(s => {
+            if (s.monthKey === currentMonthKey || (s.date && s.date.includes(`.${now.getMonth()+1}.${now.getFullYear()}`))) {
+                mMoney += s.total;
+                mAddr += s.addressCount;
+                mEn += s.enCount || 0;
+            }
+        });
+
+        document.getElementById('month-total-money').innerText = mMoney.toFixed(2);
+        document.getElementById('month-total-addr').innerText = mAddr;
+        document.getElementById('month-total-en').innerText = mEn;
+    }
+
     window.onload = function() {
         renderCurrentShift();
         renderHistory();
+        renderMonthlyStats();
     };
 </script>
 </body>
